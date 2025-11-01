@@ -1,0 +1,22 @@
+{
+  "name": "@waifu-panel/shared",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "lint": "eslint \"src/**/*.{ts,tsx}\"",
+    "test": "vitest"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "tsup": "^7.2.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.5.0"
+  }
+}
