@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 
 import { submitCharacter, type SubmissionResponse } from '../api/submissions';
 
@@ -7,7 +7,18 @@ export function SubmissionPortal() {
   const [name, setName] = useState('');
   const [series, setSeries] = useState('');
   const [description, setDescription] = useState('');
-  const [image, setImage] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [localError, setLocalError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl?.startsWith('blob:')) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const submissionMutation = useMutation({
     mutationFn: submitCharacter,
@@ -15,13 +26,62 @@ export function SubmissionPortal() {
       setName('');
       setSeries('');
       setDescription('');
-      setImage('');
+      setImageUrl('');
+      setImageFile(null);
+      setPreviewUrl((prev) => {
+        if (prev?.startsWith('blob:')) {
+          URL.revokeObjectURL(prev);
+        }
+        return null;
+      });
     }
   });
 
-  const [localError, setLocalError] = useState<string | null>(null);
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setImageFile(file);
+    if (file) {
+      setImageUrl('');
+      setPreviewUrl((prev) => {
+        if (prev?.startsWith('blob:')) {
+          URL.revokeObjectURL(prev);
+        }
+        return URL.createObjectURL(file);
+      });
+    } else if (!imageUrl) {
+      setPreviewUrl((prev) => {
+        if (prev?.startsWith('blob:')) {
+          URL.revokeObjectURL(prev);
+        }
+        return null;
+      });
+    }
+  };
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleImageUrlChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    setImageUrl(value);
+    if (value) {
+      if (imageFile) {
+        setImageFile(null);
+      }
+      setPreviewUrl((prev) => {
+        if (prev?.startsWith('blob:')) {
+          URL.revokeObjectURL(prev);
+        }
+        return value;
+      });
+    } else if (!imageFile) {
+      setPreviewUrl((prev) => {
+        if (prev?.startsWith('blob:')) {
+          URL.revokeObjectURL(prev);
+        }
+        return null;
+      });
+    }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setLocalError(null);
 
@@ -30,8 +90,8 @@ export function SubmissionPortal() {
       return;
     }
 
-    if (!image.trim()) {
-      setLocalError('Please provide an image URL for now (upload tooling TBD).');
+    if (!imageFile && !imageUrl.trim()) {
+      setLocalError('Please upload an image or provide a direct image URL.');
       return;
     }
 
@@ -40,7 +100,8 @@ export function SubmissionPortal() {
         name: name.trim(),
         series: series.trim() || undefined,
         description: description.trim() || undefined,
-        imagePath: image.trim()
+        imageFile,
+        imageUrl: imageFile ? undefined : imageUrl.trim()
       });
     } catch (error) {
       console.error(error);
@@ -48,11 +109,12 @@ export function SubmissionPortal() {
   };
 
   const submissionResult = submissionMutation.data;
+  const displayPreview = previewUrl ?? null;
 
   return (
     <section>
       <h2>Submission Portal</h2>
-      <p>Attendees can submit a character for the panel. We&apos;ll hook up uploads shortly; use an image URL placeholder for now.</p>
+      <p>Share your waifu and brace for impact. Upload an image or link to one, add some context, and we&apos;ll slot it into the roasting queue.</p>
 
       <form className="stack" onSubmit={handleSubmit}>
         <label className="field">
@@ -75,12 +137,20 @@ export function SubmissionPortal() {
         </label>
 
         <label className="field">
-          <span>Image URL (temporary)</span>
+          <span>Upload image</span>
+          <input type="file" accept="image/*" onChange={handleFileChange} />
+          {imageFile && <span className="muted small-text">{imageFile.name}</span>}
+        </label>
+
+        <label className="field">
+          <span>Image URL (fallback)</span>
           <input
-            value={image}
-            onChange={(event) => setImage(event.target.value)}
+            value={imageUrl}
+            onChange={handleImageUrlChange}
             placeholder="https://example.com/waifu.png"
+            disabled={Boolean(imageFile)}
           />
+          {imageFile && <span className="muted small-text">Remove the uploaded file above to switch back to URL mode.</span>}
         </label>
 
         {localError && <p className="error">{localError}</p>}
@@ -99,7 +169,9 @@ export function SubmissionPortal() {
       <aside className="preview-card">
         <h3>Preview</h3>
         <div className="preview-body">
-          <div className="preview-image">{image ? <img src={image} alt="" /> : '[ image goes here ]'}</div>
+          <div className="preview-image">
+            {displayPreview ? <img src={displayPreview} alt="" /> : '[ image goes here ]'}
+          </div>
           <div className="preview-details">
             <h4>{name || 'Character Name'}</h4>
             <p className="muted">{series || 'Series'}</p>
@@ -138,6 +210,11 @@ function SubmissionReceipt({ result }: { result: SubmissionResponse }) {
           <dd>{result.remainingSlots}</dd>
         </div>
       </dl>
+      {result.imagePath && (
+        <p className="muted tiny-text">
+          Image saved at <a href={result.imagePath} target="_blank" rel="noreferrer">{result.imagePath}</a>
+        </p>
+      )}
     </section>
   );
 }

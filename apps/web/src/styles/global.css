@@ -157,16 +157,6 @@ button:not(:disabled):hover {
   font-weight: 600;
 }
 
-.upload-dropzone {
-  border: 1px dashed rgba(255, 255, 255, 0.2);
-  border-radius: 1rem;
-  min-height: 160px;
-  display: grid;
-  place-items: center;
-  color: rgba(226, 232, 240, 0.7);
-  background: rgba(12, 15, 27, 0.6);
-}
-
 .card {
   background: rgba(18, 21, 35, 0.9);
   border-radius: 1rem;
@@ -179,6 +169,11 @@ button:not(:disabled):hover {
 
 .card.wide {
   grid-column: 1 / -1;
+}
+
+.card a {
+  color: #85d7ff;
+  text-decoration: underline;
 }
 
 .preview-card {
@@ -235,6 +230,20 @@ button:not(:disabled):hover {
 .receipt-grid dd {
   font-size: 1.1rem;
   font-weight: 600;
+}
+
+.small-text {
+  font-size: 0.8rem;
+}
+
+.tiny-text {
+  font-size: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.preview-card a {
+  color: #85d7ff;
+  text-decoration: underline;
 }
 
 .vote-controls {

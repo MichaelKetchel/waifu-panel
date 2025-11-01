@@ -11,6 +11,7 @@ import moderationRouter from './routes/moderation.js';
 import queueRouter from './routes/queue.js';
 import roundsRouter from './routes/rounds.js';
 import submissionsRouter from './routes/submissions.js';
+import { getUploadsDir } from './lib/storage.js';
 
 dotenv.config();
 
@@ -27,6 +28,8 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 app.options('*', cors(corsOptions));
+
+app.use('/uploads', express.static(getUploadsDir()));
 
 app.get('/healthz', (_req, res) => {
   res.json({ status: 'ok', uptime: process.uptime() });

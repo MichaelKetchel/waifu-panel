@@ -25,7 +25,7 @@ pnpm install
 Create a data directory for local SQLite and uploads (already added to `.gitignore`):
 
 ```bash
-mkdir -p data/uploads
+mkdir -p apps/data/uploads
 ```
 
 Copy `.env.example` into place and tweak if needed:
@@ -42,7 +42,7 @@ Prisma is configured for SQLite by default. Migration commands need a fully-qual
 
 ```bash
 # from repo root
-export DATABASE_URL="file:${PWD}/data/app.db"
+export DATABASE_URL="file:${PWD}/apps/data/app.db"
 pnpm --filter @waifu-panel/server exec -- prisma migrate dev --name init
 ```
 
@@ -75,7 +75,7 @@ Starts on `http://localhost:3000`, serving REST endpoints:
 pnpm --filter @waifu-panel/web dev
 ```
 
-Launches Vite on `http://localhost:5173`. The submission page is wired to the API (`VITE_API_BASE_URL` defaults to `http://localhost:3000`). Submission flow currently expects an image URL placeholder; upload support arrives later.
+Launches Vite on `http://localhost:5173`. The submission page is wired to the API (`VITE_API_BASE_URL` defaults to `http://localhost:3000`). Attendees can upload images directly or fall back to a hosted image URL.
 
 ## Build & Test
 

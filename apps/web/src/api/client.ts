@@ -5,13 +5,19 @@ interface RequestOptions extends RequestInit {
 }
 
 export async function apiFetch<TResponse>(path: string, options: RequestOptions = {}): Promise<TResponse> {
-  const { parseJson = true, headers, ...rest } = options;
+  const { parseJson = true, headers, body, ...rest } = options;
+  const isFormData = body instanceof FormData;
+
+  const finalHeaders = new Headers(headers ?? {});
+
+  if (!isFormData && body !== undefined && !finalHeaders.has('Content-Type')) {
+    finalHeaders.set('Content-Type', 'application/json');
+  }
+
   const response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(headers ?? {})
-    },
+    headers: finalHeaders,
+    body,
     ...rest
   });
 
