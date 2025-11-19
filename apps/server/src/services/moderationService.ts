@@ -1,4 +1,5 @@
 import { prisma } from '../lib/prisma.js';
+import { queueService } from './queueService.js';
 import { CHARACTER_STATUSES } from '../utils/constants.js';
 
 type ModerationAction = 'approve' | 'reject' | 'skip';
@@ -24,6 +25,7 @@ async function approveCharacter(characterId: string) {
     }
   });
 
+  await queueService.publishSnapshot();
   return character;
 }
 
@@ -38,6 +40,7 @@ async function rejectCharacter(characterId: string, reason?: string) {
   });
 
   await prisma.queuePosition.deleteMany({ where: { characterId } });
+  await queueService.publishSnapshot();
 
   return character;
 }
@@ -53,6 +56,7 @@ async function skipCharacter(characterId: string, reason?: string) {
   });
 
   await prisma.queuePosition.deleteMany({ where: { characterId } });
+  await queueService.publishSnapshot();
 
   return character;
 }

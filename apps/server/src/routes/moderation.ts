@@ -3,8 +3,11 @@ import type { Router } from 'express';
 import { z } from 'zod';
 
 import { moderateCharacter } from '../services/moderationService.js';
+import { requireControlAuth } from '../middleware/controlAuth.js';
 
 const router: Router = createRouter();
+
+router.use(requireControlAuth);
 
 const moderationSchema = z.object({
   action: z.enum(['approve', 'reject', 'skip']),

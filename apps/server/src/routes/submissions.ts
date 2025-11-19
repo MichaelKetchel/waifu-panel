@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { prisma } from '../lib/prisma.js';
 import { getPublicPathForFile, getUploadsDir } from '../lib/storage.js';
 import { createSubmission, ensureSubmitter } from '../services/submitterService.js';
+import { queueService } from '../services/queueService.js';
 import { SUBMITTER_COOKIE } from '../utils/constants.js';
 
 const router: Router = createRouter();
@@ -85,6 +86,8 @@ router.post('/', upload.single('image'), async (req, res) => {
       description: parseResult.data.description,
       imagePath: imageSource
     });
+
+    await queueService.publishSnapshot();
 
     return res.status(202).json({
       message: 'Submission received',

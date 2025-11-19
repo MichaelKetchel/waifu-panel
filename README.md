@@ -36,6 +36,11 @@ cp apps/server/.env.example apps/server/.env
 
 Ensure `CORS_ORIGIN` lists the frontend origin (e.g. `http://localhost:5173`). Multiple origins can be comma-separated.
 
+Client-side env vars (via Vite) can live in `apps/web/.env.local`:
+
+- `VITE_API_BASE_URL` — defaults to `http://localhost:3000`.
+- `VITE_SOCKET_URL` — optional override if websocket endpoint differs from the API base.
+
 ## Database
 
 Prisma is configured for SQLite by default. Migration commands need a fully-qualified `DATABASE_URL` (absolute path recommended, e.g. `file:/home/.../data/app.db`). Node 22 works when that env var is set; if you hit engine errors, falling back to Node 20 is still a safe option.

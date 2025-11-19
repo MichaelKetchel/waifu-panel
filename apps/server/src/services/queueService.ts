@@ -1,7 +1,8 @@
 import { prisma } from '../lib/prisma.js';
+import { queueEvents } from '../events/queueEvents.js';
 import { CHARACTER_STATUSES } from '../utils/constants.js';
 
-export async function getQueueSnapshot() {
+async function snapshot() {
   const queued = await prisma.queuePosition.findMany({
     include: {
       character: true
@@ -21,7 +22,7 @@ export async function getQueueSnapshot() {
   }));
 }
 
-export async function updateQueuePosition(characterId: string, position: number) {
+async function updatePosition(characterId: string, position: number) {
   await prisma.$transaction(async (tx) => {
     const existing = await tx.queuePosition.findUnique({
       where: { characterId }
@@ -38,7 +39,7 @@ export async function updateQueuePosition(characterId: string, position: number)
   });
 }
 
-export async function removeFromQueue(characterId: string) {
+async function remove(characterId: string) {
   await prisma.queuePosition.deleteMany({
     where: { characterId }
   });
@@ -50,3 +51,16 @@ export async function removeFromQueue(characterId: string) {
     }
   });
 }
+
+async function publishSnapshot() {
+  const queue = await snapshot();
+  queueEvents.broadcastQueueUpdate({ queue });
+  return queue;
+}
+
+export const queueService = {
+  snapshot,
+  updatePosition,
+  remove,
+  publishSnapshot
+};

@@ -1,4 +1,6 @@
 import { prisma } from '../lib/prisma.js';
+import { queueService } from './queueService.js';
+import { roundsEvents } from '../events/roundEvents.js';
 import { CHARACTER_STATUSES, VOTE_MODES, type VoteMode } from '../utils/constants.js';
 
 interface StartRoundInput {
@@ -43,6 +45,24 @@ export async function startRound({ characterId, mode, scale }: StartRoundInput) 
     }
   });
 
+  await queueService.publishSnapshot();
+
+  roundsEvents.broadcastRoundStart({
+    round: {
+      id: round.id,
+      characterId: round.characterId,
+      mode: round.mode,
+      scaleMin: round.scaleMin,
+      scaleMax: round.scaleMax,
+      startedAt: round.startedAt.toISOString(),
+      character: {
+        name: round.character.name,
+        imagePath: round.character.imagePath,
+        series: round.character.series ?? null
+      }
+    }
+  });
+
   return round;
 }
 
@@ -68,12 +88,19 @@ export async function endRound(roundId: string) {
     _count: true
   });
 
+  const formattedTallies = tallies.map((item) => ({
+    value: item.value,
+    count: item._count
+  }));
+
+  roundsEvents.broadcastRoundEnd({
+    roundId: round.id,
+    tallies: formattedTallies
+  });
+
   return {
     round,
-    tallies: tallies.map((item) => ({
-      value: item.value,
-      count: item._count
-    }))
+    tallies: formattedTallies
   };
 }
 
@@ -90,4 +117,43 @@ function normalizeScale(mode: VoteMode, scale?: { min: number; max: number }) {
   }
 
   return { min, max };
+}
+
+export async function getCurrentRound() {
+  const round = await prisma.round.findFirst({
+    where: { endedAt: null },
+    include: {
+      character: true
+    },
+    orderBy: {
+      startedAt: 'desc'
+    }
+  });
+
+  if (!round) {
+    return null;
+  }
+
+  const tallies = await prisma.vote.groupBy({
+    by: ['value'],
+    where: { roundId: round.id },
+    _count: true
+  });
+
+  return {
+    id: round.id,
+    character: {
+      name: round.character.name,
+      imagePath: round.character.imagePath,
+      series: round.character.series ?? null
+    },
+    mode: round.mode,
+    scale: {
+      min: round.scaleMin,
+      max: round.scaleMax
+    },
+    startedAt: round.startedAt.toISOString(),
+    tallies: tallies.map((item) => ({ value: item.value, count: item._count })),
+    status: 'live'
+  };
 }

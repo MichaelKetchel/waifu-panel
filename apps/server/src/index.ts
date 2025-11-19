@@ -11,7 +11,15 @@ import moderationRouter from './routes/moderation.js';
 import queueRouter from './routes/queue.js';
 import roundsRouter from './routes/rounds.js';
 import submissionsRouter from './routes/submissions.js';
+import votesRouter from './routes/votes.js';
+import authRouter from './routes/auth.js';
 import { getUploadsDir } from './lib/storage.js';
+import { registerControlNamespace } from './sockets/control.js';
+import { registerDisplayNamespace } from './sockets/display.js';
+import { registerAudienceNamespace } from './sockets/audience.js';
+import { registerSubmissionNamespace } from './sockets/submission.js';
+import { queueEvents } from './events/queueEvents.js';
+import { roundsEvents } from './events/roundEvents.js';
 
 dotenv.config();
 
@@ -39,31 +47,25 @@ app.use('/api/submissions', submissionsRouter);
 app.use('/api/characters/queue', queueRouter);
 app.use('/api/moderation', moderationRouter);
 app.use('/api/rounds', roundsRouter);
+app.use('/api/votes', votesRouter);
+app.use('/api/auth', authRouter);
 
 const httpServer = http.createServer(app);
 
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: '*'
+    origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
+    credentials: allowedOrigins.length > 0
   }
 });
 
-io.of('/control').on('connection', (socket) => {
-  // TODO: control namespace handlers
-  socket.emit('state:init', { message: 'control namespace not yet implemented' });
-});
+registerControlNamespace(io);
+registerDisplayNamespace(io);
+registerAudienceNamespace(io);
+registerSubmissionNamespace(io);
 
-io.of('/display').on('connection', (socket) => {
-  socket.emit('state:init', { message: 'display namespace not yet implemented' });
-});
-
-io.of('/audience').on('connection', (socket) => {
-  socket.emit('state:init', { message: 'audience namespace not yet implemented' });
-});
-
-io.of('/submission').on('connection', (socket) => {
-  socket.emit('state:init', { message: 'submission namespace not yet implemented' });
-});
+queueEvents.initialize(io);
+roundsEvents.initialize(io);
 
 httpServer.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);

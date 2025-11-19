@@ -1,12 +1,12 @@
 import { Router as createRouter } from 'express';
 import type { Router } from 'express';
 
-import { getQueueSnapshot } from '../services/queueService.js';
+import { queueService } from '../services/queueService.js';
 
 const router: Router = createRouter();
 
 router.get('/', async (_req, res) => {
-  const queue = await getQueueSnapshot();
+  const queue = await queueService.snapshot();
 
   res.json({
     queue
