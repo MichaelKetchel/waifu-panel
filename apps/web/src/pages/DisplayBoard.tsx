@@ -27,47 +27,41 @@ export function DisplayBoard() {
     <section className="projector">
       <header className="projector__header">
         <div>
-          <h2>Current Roast</h2>
-          <p className="muted">Vote now at waifu-panel.local</p>
+          <p className="projector__eyebrow">Waifu Panel Live</p>
+          <h1>{currentRound ? 'Current Roast' : queue.length > 0 ? 'Next Up' : 'Submissions Open'}</h1>
         </div>
-        <div className="status-tag status-tag--live">{currentRound ? currentRound.status : 'Idle'}</div>
+        <div className="projector__status">
+          <span className={`status-tag ${currentRound ? 'status-tag--live' : 'status-tag--disabled'}`}>
+            {currentRound ? currentRound.status : 'Idle'}
+          </span>
+          <span className="muted">Vote on your phone</span>
+        </div>
       </header>
 
-      {currentRound ? (
-        <LiveRoundBoard round={currentRound} />
-      ) : queue.length > 0 ? (
-        <UpcomingPreview next={queue[0]} upcoming={queue.slice(1, 4)} />
-      ) : (
-        <div className="card projector__empty">
-          <p className="muted">Submissions are open! Get your waifu into the queue.</p>
-        </div>
-      )}
-
-      <section className="projector__upcoming card">
-        <h3>Up Next</h3>
-        {upcoming.length === 0 ? (
-          <p className="muted">More characters coming soon.</p>
+      <div className="projector__stage">
+        {currentRound ? (
+          <LiveRoundBoard round={currentRound} />
+        ) : queue.length > 0 ? (
+          <UpcomingPreview next={queue[0]} upcoming={queue.slice(1, 4)} />
         ) : (
-          <ol className="upcoming-list-detailed">
-            {upcoming.map((entry, index) => (
-              <li key={entry.id}>
-                <span className="position">{index + 1}</span>
-                <div>
-                  <strong>{entry.name}</strong>
-                  {entry.series && <span className="muted">{entry.series}</span>}
-                </div>
-              </li>
-            ))}
-          </ol>
+          <div className="projector__empty">
+            <p>Submissions are open.</p>
+            <span className="muted">Approved characters will appear here.</span>
+          </div>
         )}
-      </section>
+      </div>
+
+      <footer className="projector__upcoming">
+        <h2>Up Next</h2>
+        {upcoming.length === 0 ? <p className="muted">More characters coming soon.</p> : <UpcomingList upcoming={upcoming} />}
+      </footer>
     </section>
   );
 }
 
 function LiveRoundBoard({ round }: { round: NonNullable<ReturnType<typeof useRoundState>['data']> }) {
   return (
-    <div className="display-board display-board--live">
+    <div className="projector-board projector-board--live">
       <div className="display-image">
         <img src={resolveImageUrl(round.character.imagePath)} alt="" />
       </div>
@@ -136,7 +130,7 @@ function UpcomingPreview({
   upcoming: Array<{ name: string; series: string | null; id: string }>;
 }) {
   return (
-    <div className="display-board">
+    <div className="projector-board">
       <div className="display-image">
         <img src={resolveImageUrl(next.imagePath)} alt="" />
       </div>
@@ -152,5 +146,21 @@ function UpcomingPreview({
         </div>
       </div>
     </div>
+  );
+}
+
+function UpcomingList({ upcoming }: { upcoming: Array<{ name: string; series: string | null; id: string }> }) {
+  return (
+    <ol className="upcoming-list-detailed">
+      {upcoming.map((entry, index) => (
+        <li key={entry.id}>
+          <span className="position">{index + 1}</span>
+          <div>
+            <strong>{entry.name}</strong>
+            {entry.series && <span className="muted">{entry.series}</span>}
+          </div>
+        </li>
+      ))}
+    </ol>
   );
 }

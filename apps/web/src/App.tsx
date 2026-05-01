@@ -1,4 +1,4 @@
-import { NavLink, Route, Routes } from 'react-router-dom';
+import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
 
 import { AudienceVoting } from './pages/AudienceVoting';
 import { ControlDeck } from './pages/ControlDeck';
@@ -6,12 +6,18 @@ import { DisplayBoard } from './pages/DisplayBoard';
 import { SubmissionPortal } from './pages/SubmissionPortal';
 
 function App() {
+  const location = useLocation();
+
+  if (location.pathname === '/display') {
+    return <DisplayBoard />;
+  }
+
   return (
     <div className="app-shell">
       <header className="top-bar">
         <div>
           <h1>Waifu Panel</h1>
-          <p className="muted">Live panel tooling for roasting everyone&apos;s questionable taste.</p>
+          <p className="muted">Your waifu sucks. We&apos;re here to prove your questionable taste.</p>
         </div>
         <nav>
           <NavLink to="/" end>
