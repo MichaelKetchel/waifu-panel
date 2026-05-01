@@ -1,4 +1,7 @@
 import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
@@ -14,17 +17,21 @@ import submissionsRouter from './routes/submissions.js';
 import votesRouter from './routes/votes.js';
 import authRouter from './routes/auth.js';
 import { getUploadsDir } from './lib/storage.js';
+import { prisma } from './lib/prisma.js';
 import { registerControlNamespace } from './sockets/control.js';
 import { registerDisplayNamespace } from './sockets/display.js';
 import { registerAudienceNamespace } from './sockets/audience.js';
 import { registerSubmissionNamespace } from './sockets/submission.js';
 import { queueEvents } from './events/queueEvents.js';
 import { roundsEvents } from './events/roundEvents.js';
+import { queueService } from './services/queueService.js';
 
 dotenv.config();
 
 const PORT = Number(process.env.PORT ?? 3000);
 const allowedOrigins = (process.env.CORS_ORIGIN ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
+const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+const webDistDir = path.resolve(moduleDir, '..', '..', 'web', 'dist');
 
 const corsOptions: CorsOptions = {
   origin: allowedOrigins.length > 0 ? allowedOrigins : true,
@@ -39,8 +46,24 @@ app.options('*', cors(corsOptions));
 
 app.use('/uploads', express.static(getUploadsDir()));
 
-app.get('/healthz', (_req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime() });
+app.get('/healthz', async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    const queue = await queueService.snapshot();
+    res.json({
+      status: 'ok',
+      uptime: process.uptime(),
+      database: 'ok',
+      queueLength: queue.length
+    });
+  } catch (error) {
+    console.error('Health check failed', error);
+    res.status(503).json({
+      status: 'error',
+      uptime: process.uptime(),
+      database: 'error'
+    });
+  }
 });
 
 app.use('/api/submissions', submissionsRouter);
@@ -49,6 +72,18 @@ app.use('/api/moderation', moderationRouter);
 app.use('/api/rounds', roundsRouter);
 app.use('/api/votes', votesRouter);
 app.use('/api/auth', authRouter);
+
+if (fs.existsSync(webDistDir)) {
+  app.use(express.static(webDistDir));
+
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/uploads') || req.path.startsWith('/socket.io')) {
+      return next();
+    }
+
+    return res.sendFile(path.join(webDistDir, 'index.html'));
+  });
+}
 
 const httpServer = http.createServer(app);
 

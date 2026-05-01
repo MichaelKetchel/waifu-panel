@@ -1,6 +1,12 @@
 # Data Model
 
-The application uses a relational schema that defaults to SQLite for local deployments and can migrate to Postgres for cloud hosting. Schema migrations are managed via Prisma/Drizzle (final choice TBD) and should remain compatible with both engines.
+The application uses a Prisma-managed relational schema configured for SQLite today. Postgres compatibility is a future extension, not an implemented deployment target.
+
+## Implementation Status
+
+Implemented tables: `Submitter`, `Character`, `Round`, `Vote`, `QueuePosition`, and `Setting`.
+
+Future tables/fields discussed below, such as control `users`, richer audit logs, events, and attachments, are roadmap items unless they already appear in `apps/server/prisma/schema.prisma`.
 
 ## Entities
 
@@ -28,7 +34,7 @@ Use the `token` to identify anonymous guests and enforce submission/vote limits.
 | `description`  | text?          | Optional blurb provided by submitter.                                          |
 | `image_path`   | string         | Path or URL to stored image.                                                    |
 | `status`       | enum           | `queued`, `approved`, `rejected`, `live`, `archived`.                           |
-| `tags`         | json?          | Optional metadata for filtering.                                               |
+| `tags`         | string?        | Optional metadata for filtering.                                               |
 | `created_at`   | timestamp      | Default `now()`.                                                                |
 | `updated_at`   | timestamp      | Updated whenever moderation status changes.                                     |
 | `moderated_by` | UUID?          | FK → `users.id` (control panel admins).                                         |
@@ -62,7 +68,7 @@ Past rounds remain archived to allow analytics.
 | `anon_token`   | string?    | Random token stored in cookie for anonymous voters.            |
 | `value`        | smallint   | Either `0/1` for yes/no or range value for 1–5 scale.           |
 | `created_at`   | timestamp  | Default `now()`.                                                |
-| `client_meta`  | json?      | Optional device info or session identifiers (hashed).          |
+| `client_meta`  | string?    | Optional device info or session identifiers (hashed).          |
 
 Add a unique constraint on `(round_id, submitter_id)` and `(round_id, anon_token)` to avoid duplicates when identity is known.
 
@@ -81,7 +87,7 @@ This table allows drag-and-drop reordering without overloading the `characters` 
 
 ### users (control admins)
 
-For moderators and panel operators.
+For moderators and panel operators. Not implemented today; the control deck currently uses a shared passcode and signed cookie.
 
 | Column       | Type      | Notes                                   |
 |--------------|-----------|-----------------------------------------|
@@ -100,7 +106,7 @@ Key/value configuration persisted in the database.
 | Column      | Type     | Notes                                                                 |
 |-------------|----------|-----------------------------------------------------------------------|
 | `key`       | string   | Primary key.                                                          |
-| `value`     | json     | Flexible payload.                                                     |
+| `value`     | string   | Flexible payload stored as serialized text.                           |
 | `updated_at`| timestamp| Track configuration changes.                                          |
 
 Use this to store submission limits, vote mode defaults, and show-day toggles.
@@ -130,4 +136,3 @@ rounds 1─∞ votes
 - **attachments table**: handle multiple images or media per submission.
 - **audit logs**: record moderation actions for transparency.
 - **rate_limit buckets**: track per-submitter or per-IP counts for flexible policies.
-

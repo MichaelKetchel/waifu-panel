@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import type { Request, Response, NextFunction } from 'express';
 
-const CONTROL_COOKIE = 'control_session';
+export const CONTROL_COOKIE = 'control_session';
 
 function computeToken() {
   const passcode = process.env.CONTROL_PASSCODE ?? '';
@@ -11,6 +11,10 @@ function computeToken() {
 
 export function hasValidControlSession(req: Request) {
   const token = req.cookies[CONTROL_COOKIE];
+  return hasValidControlToken(token);
+}
+
+export function hasValidControlToken(token?: string) {
   if (!token || !process.env.CONTROL_PASSCODE) return false;
   return token === computeToken();
 }

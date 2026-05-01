@@ -28,8 +28,12 @@ router.post('/:characterId', async (req, res) => {
       status: character.status
     });
   } catch (error) {
+    if (typeof error === 'object' && error && 'code' in error && error.code === 'P2025') {
+      return res.status(404).json({ message: 'Character not found', code: 'CHARACTER_NOT_FOUND' });
+    }
+
     console.error('Moderation error', error);
-    res.status(500).json({ message: 'Failed to update character status' });
+    return res.status(500).json({ message: 'Failed to update character status' });
   }
 });
 

@@ -13,36 +13,56 @@ interface StartRoundInput {
 }
 
 export async function startRound({ characterId, mode, scale }: StartRoundInput) {
-  const existingLive = await prisma.round.findFirst({
-    where: { endedAt: null }
-  });
-
-  if (existingLive) {
-    throw Object.assign(new Error('A round is already in progress'), { code: 'ROUND_IN_PROGRESS' });
-  }
-
-  const character = await prisma.character.update({
-    where: { id: characterId },
-    data: {
-      status: CHARACTER_STATUSES.LIVE,
-      queuePosition: {
-        delete: true
-      }
-    }
-  });
-
   const { min, max } = normalizeScale(mode, scale);
 
-  const round = await prisma.round.create({
-    data: {
-      characterId: character.id,
-      mode,
-      scaleMin: min,
-      scaleMax: max
-    },
-    include: {
-      character: true
+  const round = await prisma.$transaction(async (tx) => {
+    const existingLive = await tx.round.findFirst({
+      where: { endedAt: null }
+    });
+
+    if (existingLive) {
+      throw Object.assign(new Error('A round is already in progress'), { code: 'ROUND_IN_PROGRESS' });
     }
+
+    const character = await tx.character.findUnique({
+      where: { id: characterId }
+    });
+
+    if (!character) {
+      throw Object.assign(new Error('Character not found'), { code: 'CHARACTER_NOT_FOUND' });
+    }
+
+    if (!isStartableCharacterStatus(character.status)) {
+      throw Object.assign(new Error('Character must be approved before starting a round'), {
+        code: 'CHARACTER_NOT_APPROVED'
+      });
+    }
+
+    const previousRound = await tx.round.findUnique({
+      where: { characterId }
+    });
+
+    if (previousRound) {
+      throw Object.assign(new Error('Character already has a round'), { code: 'CHARACTER_ALREADY_USED' });
+    }
+
+    await tx.queuePosition.deleteMany({ where: { characterId } });
+    await tx.character.update({
+      where: { id: characterId },
+      data: { status: CHARACTER_STATUSES.LIVE }
+    });
+
+    return tx.round.create({
+      data: {
+        characterId,
+        mode,
+        scaleMin: min,
+        scaleMax: max
+      },
+      include: {
+        character: true
+      }
+    });
   });
 
   await queueService.publishSnapshot();
@@ -56,6 +76,7 @@ export async function startRound({ characterId, mode, scale }: StartRoundInput) 
       scaleMax: round.scaleMax,
       startedAt: round.startedAt.toISOString(),
       character: {
+        id: round.character.id,
         name: round.character.name,
         imagePath: round.character.imagePath,
         series: round.character.series ?? null
@@ -67,6 +88,20 @@ export async function startRound({ characterId, mode, scale }: StartRoundInput) 
 }
 
 export async function endRound(roundId: string) {
+  const activeRound = await prisma.round.findUnique({
+    where: { id: roundId }
+  });
+
+  if (!activeRound) {
+    throw Object.assign(new Error('Round not found'), { code: 'ROUND_NOT_FOUND' });
+  }
+
+  if (activeRound.endedAt) {
+    throw Object.assign(new Error('Round not active'), { code: 'ROUND_NOT_ACTIVE' });
+  }
+
+  const formattedTallies = await getFormattedTallies(roundId);
+
   const round = await prisma.round.update({
     where: { id: roundId },
     data: {
@@ -76,22 +111,8 @@ export async function endRound(roundId: string) {
           status: CHARACTER_STATUSES.ARCHIVED
         }
       }
-    },
-    include: {
-      votes: true
     }
   });
-
-  const tallies = await prisma.vote.groupBy({
-    by: ['value'],
-    where: { roundId },
-    _count: true
-  });
-
-  const formattedTallies = tallies.map((item) => ({
-    value: item.value,
-    count: item._count
-  }));
 
   roundsEvents.broadcastRoundEnd({
     roundId: round.id,
@@ -101,6 +122,62 @@ export async function endRound(roundId: string) {
   return {
     round,
     tallies: formattedTallies
+  };
+}
+
+export async function skipRound(roundId: string, reason?: string) {
+  const activeRound = await prisma.round.findUnique({
+    where: { id: roundId },
+    include: {
+      character: true
+    }
+  });
+
+  if (!activeRound) {
+    throw Object.assign(new Error('Round not found'), { code: 'ROUND_NOT_FOUND' });
+  }
+
+  if (activeRound.endedAt) {
+    throw Object.assign(new Error('Round not active'), { code: 'ROUND_NOT_ACTIVE' });
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const deletedVotes = await tx.vote.deleteMany({
+      where: { roundId }
+    });
+
+    const round = await tx.round.update({
+      where: { id: roundId },
+      data: {
+        endedAt: new Date(),
+        character: {
+          update: {
+            status: CHARACTER_STATUSES.ARCHIVED
+          }
+        }
+      }
+    });
+
+    return {
+      round,
+      discardedVotes: deletedVotes.count
+    };
+  });
+
+  roundsEvents.broadcastCharacterSkipped({
+    characterId: activeRound.characterId,
+    roundId,
+    reason
+  });
+
+  roundsEvents.broadcastRoundEnd({
+    roundId,
+    tallies: []
+  });
+
+  return {
+    ...result,
+    tallies: []
   };
 }
 
@@ -117,6 +194,23 @@ function normalizeScale(mode: VoteMode, scale?: { min: number; max: number }) {
   }
 
   return { min, max };
+}
+
+export function isStartableCharacterStatus(status: string) {
+  return status === CHARACTER_STATUSES.APPROVED;
+}
+
+async function getFormattedTallies(roundId: string) {
+  const tallies = await prisma.vote.groupBy({
+    by: ['value'],
+    where: { roundId },
+    _count: true
+  });
+
+  return tallies.map((item) => ({
+    value: item.value,
+    count: item._count
+  }));
 }
 
 export async function getCurrentRound() {
@@ -143,6 +237,7 @@ export async function getCurrentRound() {
   return {
     id: round.id,
     character: {
+      id: round.character.id,
       name: round.character.name,
       imagePath: round.character.imagePath,
       series: round.character.series ?? null

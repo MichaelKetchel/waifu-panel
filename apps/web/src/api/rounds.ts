@@ -37,6 +37,7 @@ export interface EndRoundResponse {
   message: string;
   roundId: string;
   tallies: Array<{ value: number; count: number }>;
+  discardedVotes?: number;
 }
 
 export function endRound(payload: EndRoundPayload) {

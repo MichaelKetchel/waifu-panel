@@ -10,6 +10,7 @@ interface RoundStartPayload {
     scaleMax: number;
     startedAt: string;
     character: {
+      id: string;
       name: string;
       imagePath: string;
       series?: string | null;
@@ -25,6 +26,12 @@ interface RoundEndPayload {
 interface VoteProgressPayload {
   roundId: string;
   tallies: Array<{ value: number; count: number }>;
+}
+
+interface CharacterSkippedPayload {
+  characterId: string;
+  roundId?: string;
+  reason?: string;
 }
 
 class RoundEvents {
@@ -58,6 +65,12 @@ class RoundEvents {
     this.controlNs?.emit('vote:progress', payload);
     this.displayNs?.emit('vote:progress', payload);
     this.audienceNs?.emit('vote:progress', payload);
+  }
+
+  broadcastCharacterSkipped(payload: CharacterSkippedPayload) {
+    this.controlNs?.emit('character:skipped', payload);
+    this.displayNs?.emit('character:skipped', payload);
+    this.audienceNs?.emit('character:skipped', payload);
   }
 }
 

@@ -4,11 +4,16 @@
   "private": true,
   "packageManager": "pnpm@8.15.6",
   "scripts": {
-    "dev": "pnpm -C apps/server dev",
-    "dev:server": "pnpm -C apps/server dev",
-    "dev:web": "pnpm -C apps/web dev",
+    "setup": "pnpm install --frozen-lockfile && pnpm db:generate",
+    "dev": "pnpm -r --parallel --filter @waifu-panel/server --filter @waifu-panel/web dev",
+    "dev:server": "pnpm --filter @waifu-panel/server dev",
+    "dev:web": "pnpm --filter @waifu-panel/web dev",
     "build": "pnpm -r build",
+    "start": "pnpm --filter @waifu-panel/server start",
     "lint": "pnpm -r lint",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "db:generate": "pnpm --filter @waifu-panel/server prisma:generate",
+    "db:migrate": "pnpm --filter @waifu-panel/server prisma:migrate",
+    "db:deploy": "pnpm --filter @waifu-panel/server prisma:deploy"
   }
 }

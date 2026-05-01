@@ -22,3 +22,11 @@ export function getSocket(namespace: string): Socket {
   }
   return existing;
 }
+
+export function disconnectSocket(namespace: string) {
+  const socket = SOCKETS.get(namespace);
+  if (!socket) return;
+
+  socket.disconnect();
+  SOCKETS.delete(namespace);
+}

@@ -11,6 +11,7 @@ import { getPublicPathForFile, getUploadsDir } from '../lib/storage.js';
 import { createSubmission, ensureSubmitter } from '../services/submitterService.js';
 import { queueService } from '../services/queueService.js';
 import { SUBMITTER_COOKIE } from '../utils/constants.js';
+import { queueEvents } from '../events/queueEvents.js';
 
 const router: Router = createRouter();
 
@@ -88,6 +89,15 @@ router.post('/', upload.single('image'), async (req, res) => {
     });
 
     await queueService.publishSnapshot();
+    queueEvents.broadcastSubmissionReceived({
+      submissionId: result.characterId,
+      character: {
+        id: result.characterId,
+        name: parseResult.data.name,
+        series: parseResult.data.series ?? null,
+        imagePath: imageSource
+      }
+    });
 
     return res.status(202).json({
       message: 'Submission received',

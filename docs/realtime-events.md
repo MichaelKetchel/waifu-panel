@@ -1,15 +1,15 @@
 # Realtime Events
 
-Socket.IO coordinates live updates between the control deck, display board, submission portal, and audience voting clients. All events use JSON payloads with camelCased keys and share TypeScript definitions in `packages/shared`.
+Socket.IO coordinates live updates between the control deck, display board, submission portal, and audience voting clients. All events use JSON payloads with camelCased keys. Public payload shapes are moving into `packages/shared`; some backend event internals still use local interfaces.
 
 ## Namespaces
 
 - `/control` — Moderators/panel operators.
 - `/display` — Projector-only read-only feed.
 - `/audience` — Voting interface for attendees.
-- `/submission` — Submission portal updates (optional).
+- `/submission` — Submission portal updates.
 
-Clients authenticate by passing a short-lived JWT or shared passphrase token in the handshake query (control namespace) and the `submitter_token` cookie for audience/submission namespaces.
+The `/control` namespace requires the signed control cookie created by `POST /api/auth/control`. The display, audience, and submission namespaces are currently open on the local network.
 
 ## Event Catalogue
 
@@ -17,52 +17,55 @@ Clients authenticate by passing a short-lived JWT or shared passphrase token in 
 
 | Event                    | Namespace(s)        | Payload                                        | Description |
 |--------------------------|---------------------|------------------------------------------------|-------------|
-| `state:init`             | control, display    | `StateSnapshot`                                | Sent on connect to hydrate with current queue, live round, settings. |
+| `state:init`             | control, display, audience; submission by request | `StateSnapshot` | Hydrates clients with queue, active round, upcoming entries, and basic settings. |
 | `queue:updated`          | control, display    | `{ queue: QueueEntry[] }`                      | Updated order/status of characters. |
 | `submission:received`    | control             | `{ submissionId: string, character: CharacterSummary }` | Notifies moderators of new submissions. |
-| `round:started`          | control, display, audience | `{ round: RoundDetail }`                 | Announces active character and voting mode. |
-| `round:ended`            | control, display, audience | `{ roundId: string, finalTallies: VoteTallies }` | Signals end of voting and provides final counts. |
-| `vote:progress`          | control, display    | `{ roundId: string, tallies: VoteTallies }`    | High-frequency updates (throttled). |
-| `character:skipped`      | control, display, audience | `{ characterId: string, reason?: string }` | Indicates a character was skipped mid-round. |
-| `settings:updated`       | control, display, audience, submission | `{ settings: SettingsPayload }` | Broadcast when configuration changes. |
+| `submission:welcome`     | submission          | `{ message: string }`                          | Confirms the submission socket connected. |
+| `round:started`          | control, display, audience | `{ round: RoundDetail }`                 | Announces active character and voting mode after REST start. |
+| `round:ended`            | control, display, audience | `{ roundId: string, tallies: VoteTallies }` | Signals end of voting and provides final counts. |
+| `vote:progress`          | control, display, audience | `{ roundId: string, tallies: VoteTallies }` | Broadcast after vote changes. |
+| `character:skipped`      | control, display, audience | `{ characterId: string, roundId?: string, reason?: string }` | Indicates a queued character or live round was skipped. |
 | `error`                  | all                 | `{ code: string, message: string }`            | Standardized error reporting. |
 
 ### Client → Server
 
 | Event                 | Namespace      | Payload                                              | Notes |
 |-----------------------|----------------|------------------------------------------------------|-------|
-| `control:queue:move`  | control        | `{ characterId: string, position: number }`         | Reorders queue. |
-| `control:round:start` | control        | `{ characterId: string, mode?: VoteMode }`          | Launches a round and notifies others. |
-| `control:round:end`   | control        | `{ roundId: string }`                               | Closes the current round. |
-| `control:moderate`    | control        | `{ characterId: string, action: 'approve'|'reject'|'skip' }` | Moderation decisions. |
-| `audience:vote`       | audience       | `{ roundId: string, value: number }`                | Submit or update a vote. |
-| `submission:new`      | submission     | `{ tempId: string }` (ack-only)                     | Used to confirm receipt before REST response completes in slow networks. |
-| `submission:cancel`   | submission     | `{ submissionId: string }`                          | Allows user to retract before moderation. |
+| `state:request`       | all            | none                                                 | Server replies with `state:init`. |
+| `queue:fetch`         | control        | none                                                 | Server replies with `queue:updated`. |
+| `control:queue:move`  | control        | `{ characterId: string, position: number }`          | Reorders queue and supports acknowledgement. REST `PATCH /api/characters/queue/:characterId` is the UI path. |
+
+Round start/end/skip, moderation, submission intake, and votes are currently REST-owned actions that broadcast socket updates after persistence.
 
 ### Acknowledgements
 
-- Critical events (`control:round:start`, `audience:vote`) expect acknowledgement to confirm persistence. Failure triggers client-side retry with exponential backoff.
-- Broadcasting events (`vote:progress`) are fire-and-forget but throttled (e.g., max 5 updates/second) to keep bandwidth manageable.
+- `control:queue:move` supports an optional acknowledgement `{ ok: boolean, message?: string }`.
+- Broadcasting events are fire-and-forget. Vote progress is not throttled yet.
 
 ## Payload Interfaces
 
-Informal TypeScript-like definitions (final versions live in `packages/shared/types.ts`):
+Informal TypeScript-like definitions. The canonical exported types live in `packages/shared/src/index.ts`.
 
 ```ts
 type VoteMode = 'yn' | 'scale';
+type CharacterStatus = 'queued' | 'approved' | 'rejected' | 'live' | 'archived';
 
 interface CharacterSummary {
   id: string;
   name: string;
-  series?: string;
-  imageUrl: string;
-  submitterAlias?: string;
+  series: string | null;
+  imagePath: string;
+  submitterAlias?: string | null;
+  status?: CharacterStatus;
 }
 
 interface QueueEntry {
-  character: CharacterSummary;
+  id: string;
   position: number;
-  status: 'queued' | 'approved' | 'live';
+  status: CharacterStatus;
+  name: string;
+  series: string | null;
+  imagePath: string;
 }
 
 interface RoundDetail {
@@ -73,14 +76,30 @@ interface RoundDetail {
   startedAt: string;
 }
 
+interface VoteTally {
+  value: number;
+  count: number;
+}
+
 interface VoteTallies {
   roundId: string;
-  totals: Record<string, number>; // e.g. { yes: 42, no: 12 } or { '1': 3, '2': 1, ... }
+  tallies: VoteTally[];
+}
+
+interface RoundState {
+  id: string;
+  character: CharacterSummary;
+  mode: VoteMode;
+  scale: { min: number; max: number };
+  startedAt: string;
+  tallies: VoteTally[];
+  status: 'live' | 'ended';
 }
 
 interface StateSnapshot {
+  schemaVersion: number;
   queue: QueueEntry[];
-  activeRound?: RoundDetail & { tallies: VoteTallies['totals'] };
+  activeRound: RoundState | null;
   upcoming: CharacterSummary[];
   settings: SettingsPayload;
 }
@@ -95,7 +114,6 @@ interface SettingsPayload {
 ## Reliability Considerations
 
 - **Reconnects**: Clients emit `state:request` if they miss updates; server replies with `state:init`.
-- **Versioning**: Include `schemaVersion` in snapshots to detect incompatible client builds.
-- **Rooms**: Use Socket.IO rooms keyed by `roundId` to scope vote tallies when multiple events run concurrently (future multi-event support).
-- **Compression**: Enable per-message compression but cap payload size by trimming `description` fields from broadcast payloads.
-
+- **Versioning**: `state:init` snapshots include `schemaVersion`.
+- **Future multi-event support**: Rooms keyed by event or round would be needed for concurrent panels.
+- **Future bandwidth controls**: Throttle `vote:progress` if venue networks struggle.

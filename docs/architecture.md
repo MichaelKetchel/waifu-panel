@@ -21,7 +21,7 @@ The project is a monorepo with three major parts:
 - **Submission flow**: REST handlers receive character submissions, apply rate limits using a lightweight cookie (`submitter_token`), and queue items for moderation.
 - **Moderation and scheduling**: Control dashboard APIs manage the queue, approve/reject entries, and start/advance rounds.
 - **Voting**: Real-time events broadcast the active character, vote prompts, and live tally updates to display and audience clients.
-- **Storage abstraction**: Interface-driven layer with implementations for local filesystem + SQLite (default) and optional Supabase Postgres + object storage.
+- **Storage**: Local filesystem uploads and SQLite are implemented today. Postgres and object storage remain future extensions.
 
 ## Runtime Topology
 
@@ -40,10 +40,10 @@ The server bundles static assets for the web app during build time, allowing a s
 
 ## Key Design Choices
 
-- **Local-first**: SQLite database and disk-backed file storage ensure the panel runs without reliable internet. Cloud drivers plug in via configuration.
+- **Local-first**: SQLite database and disk-backed file storage ensure the panel runs without reliable internet.
 - **Minimal identity**: Cookie-based submitter token enforces per-person limits without requiring social logins. Future auth providers can slot into the auth middleware.
 - **Real-time resilience**: Socket.IO namespaces keep audience, control, and display clients in sync. On reconnect, the server sends a state snapshot to avoid stale data.
-- **Offline-friendly UI**: React app registers a service worker to cache critical assets and prefetch upcoming character images.
+- **Offline posture**: The app is meant to run on a local network. A service worker/offline asset cache is not implemented.
 - **Single Docker image**: Both server and frontend compile into one container for straightforward local or VPS deployment.
 
 ## Frontend Applications
@@ -60,13 +60,13 @@ Shared components (cards, vote widgets, timers) live in the web app but use shar
 - **Express API**:
   - `POST /api/submissions` — handle new character submissions.
   - `GET /api/characters/queue` — deliver current queue to control deck.
-  - `POST /api/moderation/{approve|reject|skip}` — control deck actions.
+  - `PATCH /api/characters/queue/:characterId` — reorder queue entries.
+  - `POST /api/moderation/:characterId` — approve, reject, or skip submissions.
   - `POST /api/rounds/start` — start a live round and notify clients.
+  - `POST /api/rounds/end` and `POST /api/rounds/skip` — close live rounds.
 - **Socket.IO Events** (detailed in `docs/realtime-events.md`):
   - Submission notifications, queue updates, round lifecycle, live vote tallies.
-- **Background tasks**:
-  - Optional sync job to push locally stored assets to cloud buckets.
-  - Periodic cleanup of old submissions and votes.
+- **Background tasks**: No background workers are implemented today.
 
 ## Extensibility Roadmap
 
@@ -80,4 +80,3 @@ Shared components (cards, vote widgets, timers) live in the web app but use shar
 - [`docs/data-model.md`](./data-model.md) — database schema and entity relationships.
 - [`docs/realtime-events.md`](./realtime-events.md) — API/event contracts for Socket.IO.
 - [`docs/deployment.md`](./deployment.md) — Docker setup, configuration, and operations.
-

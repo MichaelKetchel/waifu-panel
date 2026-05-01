@@ -1,8 +1,8 @@
 import { Router as createRouter } from 'express';
-import type { Router } from 'express';
+import type { Response, Router } from 'express';
 import { z } from 'zod';
 
-import { endRound, startRound, getCurrentRound } from '../services/roundService.js';
+import { endRound, startRound, getCurrentRound, skipRound } from '../services/roundService.js';
 import { requireControlAuth } from '../middleware/controlAuth.js';
 
 const router: Router = createRouter();
@@ -33,12 +33,8 @@ router.post('/start', requireControlAuth, async (req, res) => {
       round
     });
   } catch (error) {
-    if (typeof error === 'object' && error && 'code' in error && (error as any).code === 'ROUND_IN_PROGRESS') {
-      return res.status(409).json({ message: 'A round is already active', code: 'ROUND_IN_PROGRESS' });
-    }
-
     console.error('Start round error', error);
-    res.status(500).json({ message: 'Failed to start round' });
+    return handleRoundError(res, error, 'Failed to start round');
   }
 });
 
@@ -62,7 +58,7 @@ router.post('/end', requireControlAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('End round error', error);
-    res.status(500).json({ message: 'Failed to end round' });
+    return handleRoundError(res, error, 'Failed to end round');
   }
 });
 
@@ -73,16 +69,17 @@ router.post('/skip', requireControlAuth, async (req, res) => {
   }
 
   try {
-    const { round, tallies } = await endRound(parseResult.data.roundId);
+    const { round, tallies, discardedVotes } = await skipRound(parseResult.data.roundId);
 
     res.json({
       message: 'Round skipped',
       roundId: round.id,
-      tallies
+      tallies,
+      discardedVotes
     });
   } catch (error) {
     console.error('Skip round error', error);
-    res.status(500).json({ message: 'Failed to skip round' });
+    return handleRoundError(res, error, 'Failed to skip round');
   }
 });
 
@@ -97,3 +94,23 @@ router.get('/current', async (_req, res) => {
 });
 
 export default router;
+
+function handleRoundError(res: Response, error: unknown, fallbackMessage: string) {
+  const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : undefined;
+
+  switch (code) {
+    case 'CHARACTER_NOT_FOUND':
+    case 'ROUND_NOT_FOUND':
+      return res.status(404).json({ message: code === 'CHARACTER_NOT_FOUND' ? 'Character not found' : 'Round not found', code });
+    case 'CHARACTER_NOT_APPROVED':
+      return res.status(409).json({ message: 'Character must be approved before starting a round', code });
+    case 'CHARACTER_ALREADY_USED':
+      return res.status(409).json({ message: 'Character already has a round', code });
+    case 'ROUND_IN_PROGRESS':
+      return res.status(409).json({ message: 'A round is already active', code });
+    case 'ROUND_NOT_ACTIVE':
+      return res.status(409).json({ message: 'Round is not active', code });
+    default:
+      return res.status(500).json({ message: fallbackMessage });
+  }
+}

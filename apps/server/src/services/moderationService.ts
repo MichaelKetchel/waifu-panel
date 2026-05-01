@@ -30,41 +30,49 @@ async function approveCharacter(characterId: string) {
 }
 
 async function rejectCharacter(characterId: string, reason?: string) {
-  const character = await prisma.character.update({
-    where: { id: characterId },
-    data: {
-      status: CHARACTER_STATUSES.REJECTED,
-      moderatedAt: new Date(),
-      description: appendModerationNote('Rejected', reason)
-    }
+  const character = await prisma.$transaction(async (tx) => {
+    const updated = await tx.character.update({
+      where: { id: characterId },
+      data: {
+        status: CHARACTER_STATUSES.REJECTED,
+        moderatedAt: new Date()
+      }
+    });
+
+    await queueService.removePosition(characterId, tx);
+
+    return updated;
   });
 
-  await prisma.queuePosition.deleteMany({ where: { characterId } });
+  if (reason) {
+    console.info(`Character ${characterId} rejected: ${reason}`);
+  }
+
   await queueService.publishSnapshot();
 
   return character;
 }
 
 async function skipCharacter(characterId: string, reason?: string) {
-  const character = await prisma.character.update({
-    where: { id: characterId },
-    data: {
-      status: CHARACTER_STATUSES.ARCHIVED,
-      moderatedAt: new Date(),
-      description: appendModerationNote('Skipped', reason)
-    }
+  const character = await prisma.$transaction(async (tx) => {
+    const updated = await tx.character.update({
+      where: { id: characterId },
+      data: {
+        status: CHARACTER_STATUSES.ARCHIVED,
+        moderatedAt: new Date()
+      }
+    });
+
+    await queueService.removePosition(characterId, tx);
+
+    return updated;
   });
 
-  await prisma.queuePosition.deleteMany({ where: { characterId } });
+  if (reason) {
+    console.info(`Character ${characterId} skipped: ${reason}`);
+  }
+
   await queueService.publishSnapshot();
 
   return character;
-}
-
-function appendModerationNote(label: string, reason?: string) {
-  if (!reason) {
-    return undefined;
-  }
-
-  return `${label} — ${reason}`;
 }

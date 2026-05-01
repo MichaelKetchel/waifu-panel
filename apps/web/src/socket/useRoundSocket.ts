@@ -2,33 +2,7 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import { getSocket } from './socket';
-import type { RoundState } from '../types/round';
-
-interface RoundStartedPayload {
-  round: {
-    id: string;
-    characterId: string;
-    mode: string;
-    scaleMin: number;
-    scaleMax: number;
-    startedAt: string;
-    character: {
-      name: string;
-      imagePath: string;
-      series?: string | null;
-    };
-  };
-}
-
-interface RoundEndedPayload {
-  roundId: string;
-  tallies: Array<{ value: number; count: number }>;
-}
-
-interface VoteProgressPayload {
-  roundId: string;
-  tallies: Array<{ value: number; count: number }>;
-}
+import type { RoundEndedPayload, RoundStartedPayload, RoundState, StateSnapshot, VoteProgressPayload } from '@waifu-panel/shared';
 
 type Namespace = '/control' | '/display' | '/audience';
 
@@ -78,14 +52,21 @@ export function useRoundSocket(namespace: Namespace, enabled = true) {
       });
     };
 
+    const handleStateInit = (payload: StateSnapshot) => {
+      queryClient.setQueryData<RoundState | null>(['round', 'current'], payload.activeRound);
+    };
+
     socket.on('round:started', handleStart);
     socket.on('round:ended', handleEnd);
     socket.on('vote:progress', handleVoteProgress);
+    socket.on('state:init', handleStateInit);
+    socket.emit('state:request');
 
     return () => {
       socket.off('round:started', handleStart);
       socket.off('round:ended', handleEnd);
       socket.off('vote:progress', handleVoteProgress);
+      socket.off('state:init', handleStateInit);
     };
   }, [namespace, enabled, queryClient]);
 }

@@ -1,0 +1,16 @@
+.git
+.idea
+node_modules
+dist
+build
+coverage
+*.log
+.env
+.env.*
+!.env.example
+data
+apps/data
+uploads
+apps/web/dist
+apps/server/dist
+packages/shared/dist

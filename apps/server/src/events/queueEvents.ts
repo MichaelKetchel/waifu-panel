@@ -12,6 +12,16 @@ interface QueueUpdatePayload {
   }>;
 }
 
+interface SubmissionReceivedPayload {
+  submissionId: string;
+  character: {
+    id: string;
+    name: string;
+    series: string | null;
+    imagePath: string;
+  };
+}
+
 class QueueEvents {
   private controlNs?: Namespace;
   private displayNs?: Namespace;
@@ -25,6 +35,10 @@ class QueueEvents {
     if (!this.controlNs || !this.displayNs) return;
     this.controlNs.emit('queue:updated', payload);
     this.displayNs.emit('queue:updated', payload);
+  }
+
+  broadcastSubmissionReceived(payload: SubmissionReceivedPayload) {
+    this.controlNs?.emit('submission:received', payload);
   }
 
   joinQueueRoom(socket: Socket) {
