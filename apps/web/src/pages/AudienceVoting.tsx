@@ -74,6 +74,9 @@ function LiveVoteCard({ round, selectedValue, onVote, isSubmitting, feedback }: 
 
   const yesCount = round.tallies.find((tally) => tally.value === 1)?.count ?? 0;
   const noCount = round.tallies.find((tally) => tally.value === 0)?.count ?? 0;
+  const totalVotes = yesCount + noCount;
+  const yesPercent = totalVotes > 0 ? Math.round((yesCount / totalVotes) * 100) : 0;
+  const noPercent = totalVotes > 0 ? 100 - yesPercent : 0;
 
   return (
     <div className="live-vote">
@@ -93,7 +96,7 @@ function LiveVoteCard({ round, selectedValue, onVote, isSubmitting, feedback }: 
               onClick={() => onVote(1)}
               disabled={round.status !== 'live' || isSubmitting}
             >
-              Yes ({yesCount})
+              Yes {yesPercent}% ({yesCount})
             </button>
             <button
               type="button"
@@ -101,7 +104,7 @@ function LiveVoteCard({ round, selectedValue, onVote, isSubmitting, feedback }: 
               onClick={() => onVote(0)}
               disabled={round.status !== 'live' || isSubmitting}
             >
-              No ({noCount})
+              No {noPercent}% ({noCount})
             </button>
           </div>
         ) : (
@@ -126,23 +129,29 @@ function ScaleVoteControls({
   onVote: (value: number) => void;
   isSubmitting: boolean;
 }) {
-  const votesByValue = new Map(round.tallies.map((entry) => [entry.value, entry.count]));
   const values = Array.from({ length: round.scale.max - round.scale.min + 1 }, (_, idx) => round.scale.min + idx);
+  const totalVotes = round.tallies.reduce((sum, entry) => sum + entry.count, 0);
 
   return (
-    <div className="scale-vote">
+    <div className="star-rating" role="radiogroup" aria-label="Rate this character">
       {values.map((value) => (
         <button
           key={value}
           type="button"
-          className={`scale-vote__option ${selectedValue === value ? 'active' : ''}`}
+          className={`star-rating__star ${selectedValue !== null && value <= selectedValue ? 'active' : ''}`}
           onClick={() => onVote(value)}
           disabled={round.status !== 'live' || isSubmitting}
+          role="radio"
+          aria-checked={selectedValue === value}
+          aria-label={`${value} star${value === 1 ? '' : 's'}`}
         >
-          <span className="scale-vote__value">{value}</span>
-          <span className="scale-vote__count">{votesByValue.get(value) ?? 0}</span>
+          <span aria-hidden="true">★</span>
         </button>
       ))}
+      <p className="muted small-text star-rating__summary">
+        {selectedValue ? `${selectedValue} of ${round.scale.max} selected. ` : ''}
+        {totalVotes} vote{totalVotes === 1 ? '' : 's'} cast.
+      </p>
     </div>
   );
 }

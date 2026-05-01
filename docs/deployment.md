@@ -15,7 +15,7 @@ All configuration flows through environment variables. A `.env.example` will mir
 |----------|---------|---------|
 | `NODE_ENV` | `development` \| `production` | `development` |
 | `PORT` | HTTP port for server | `3000` |
-| `DATABASE_URL` | SQLite path | local SQLite |
+| `DATABASE_URL` | SQLite path | `file:../../data/app.db` for local scripts/server runtime |
 | `STORAGE_DRIVER` | Storage backend; only `local` is implemented today | `local` |
 | `STORAGE_LOCAL_PATH` | Directory for uploads when `local` | `./data/uploads` |
 | `PUBLIC_BASE_URL` | Optional absolute base URL for generated upload links | unset |
@@ -27,11 +27,12 @@ All configuration flows through environment variables. A `.env.example` will mir
 ## Local Development Workflow
 
 1. Install dependencies and generate Prisma Client: `pnpm setup`.
-2. Run database migrations: `pnpm db:migrate -- --name init`.
+2. Run database migrations: `pnpm db:migrate -- --name init`. This uses `apps/data/app.db` unless `DATABASE_URL` is set.
 3. Start dev servers:
    - `pnpm dev:server` — Express + Socket.IO with auto-reload.
    - `pnpm dev:web` — Vite dev server for React app.
    - `pnpm dev` — concurrently run both.
+   - `pnpm dev:lan` — run migrations, bind Vite to the LAN, and configure frontend API/socket URLs for other devices.
 4. Access the submission page at `http://localhost:5173`, audience page at `/audience`, display at `/display`, and control deck at `/control`.
 
 ### Offline Simulation

@@ -1,9 +1,11 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 
-import { submitCharacter, type SubmissionResponse } from '../api/submissions';
+import { fetchMySubmissions, submitCharacter, type SubmissionResponse, type SubmitterSubmission } from '../api/submissions';
+import { resolveImageUrl } from '../utils/media';
 
 export function SubmissionPortal() {
+  const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [series, setSeries] = useState('');
   const [description, setDescription] = useState('');
@@ -11,6 +13,12 @@ export function SubmissionPortal() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  const submissionsQuery = useQuery({
+    queryKey: ['submissions', 'mine'],
+    queryFn: fetchMySubmissions,
+    refetchOnWindowFocus: false
+  });
 
   useEffect(() => {
     return () => {
@@ -22,7 +30,12 @@ export function SubmissionPortal() {
 
   const submissionMutation = useMutation({
     mutationFn: submitCharacter,
-    onSuccess: () => {
+    onSuccess: (data) => {
+      queryClient.setQueryData(['submissions', 'mine'], {
+        submissions: data.submissions,
+        remainingSlots: data.remainingSlots,
+        submissionLimit: data.submissionLimit
+      });
       setName('');
       setSeries('');
       setDescription('');
@@ -110,11 +123,23 @@ export function SubmissionPortal() {
 
   const submissionResult = submissionMutation.data;
   const displayPreview = previewUrl ?? null;
+  const mySubmissions = submissionsQuery.data?.submissions ?? [];
+  const remainingSlots = submissionsQuery.data?.remainingSlots ?? submissionResult?.remainingSlots ?? null;
+  const submissionLimit = submissionsQuery.data?.submissionLimit ?? submissionResult?.submissionLimit ?? null;
 
   return (
     <section>
       <h2>Submission Portal</h2>
       <p>Share your waifu and brace for impact. Upload an image or link to one, add some context, and we&apos;ll slot it into the roasting queue.</p>
+
+      <div className="submission-limit card">
+        <strong>{remainingSlots ?? '...'}</strong>
+        <span className="muted">
+          {submissionLimit == null
+            ? 'Checking remaining submissions'
+            : `of ${submissionLimit} active submission${submissionLimit === 1 ? '' : 's'} remaining`}
+        </span>
+      </div>
 
       <form className="stack" onSubmit={handleSubmit}>
         <label className="field">
@@ -181,6 +206,12 @@ export function SubmissionPortal() {
       </aside>
 
       {submissionResult && <SubmissionReceipt result={submissionResult} />}
+
+      <MySubmissionsPanel
+        submissions={mySubmissions}
+        isLoading={submissionsQuery.isLoading}
+        error={submissionsQuery.error instanceof Error ? submissionsQuery.error : null}
+      />
     </section>
   );
 }
@@ -214,6 +245,54 @@ function SubmissionReceipt({ result }: { result: SubmissionResponse }) {
         <p className="muted tiny-text">
           Image saved at <a href={result.imagePath} target="_blank" rel="noreferrer">{result.imagePath}</a>
         </p>
+      )}
+    </section>
+  );
+}
+
+function MySubmissionsPanel({
+  submissions,
+  isLoading,
+  error
+}: {
+  submissions: SubmitterSubmission[];
+  isLoading: boolean;
+  error: Error | null;
+}) {
+  return (
+    <section className="card my-submissions">
+      <h3>Your submissions</h3>
+      {isLoading ? (
+        <p className="muted">Checking this device&apos;s submissions...</p>
+      ) : error ? (
+        <p className="error">{error.message}</p>
+      ) : submissions.length === 0 ? (
+        <p className="muted">No submissions from this device yet.</p>
+      ) : (
+        <ul className="submission-status-list">
+          {submissions.map((submission) => (
+            <li key={submission.submissionId} className="submission-status-item">
+              <div className="submission-status-item__image">
+                <img src={resolveImageUrl(submission.imagePath)} alt="" />
+              </div>
+              <div className="submission-status-item__details">
+                <div className="submission-status-item__title">
+                  <strong>{submission.name}</strong>
+                  {submission.series && <span className="muted">{submission.series}</span>}
+                </div>
+                <div className="submission-status-item__meta">
+                  <span className={`status-tag status-tag--${submission.status}`}>{submission.status}</span>
+                  <span className="muted small-text">
+                    {submission.queuePosition ? `Queue #${submission.queuePosition}` : 'Not currently queued'}
+                  </span>
+                </div>
+                {submission.status === 'rejected' && submission.rejectionReason && (
+                  <p className="error small-text">Rejected: {submission.rejectionReason}</p>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );

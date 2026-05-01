@@ -53,7 +53,10 @@ export function useRoundSocket(namespace: Namespace, enabled = true) {
     };
 
     const handleStateInit = (payload: StateSnapshot) => {
-      queryClient.setQueryData<RoundState | null>(['round', 'current'], payload.activeRound);
+      queryClient.setQueryData<RoundState | null>(['round', 'current'], (previous) => {
+        if (payload.activeRound) return payload.activeRound;
+        return previous?.status === 'ended' ? previous : null;
+      });
     };
 
     socket.on('round:started', handleStart);

@@ -3,6 +3,7 @@ import type { Router } from 'express';
 import { z } from 'zod';
 
 import { requireControlAuth } from '../middleware/controlAuth.js';
+import { hasValidControlSession } from '../middleware/controlAuth.js';
 import { queueService } from '../services/queueService.js';
 
 const router: Router = createRouter();
@@ -12,7 +13,7 @@ const moveQueueItemSchema = z.object({
 });
 
 router.get('/', async (_req, res) => {
-  const queue = await queueService.snapshot();
+  const queue = await queueService.snapshot({ approvedOnly: !hasValidControlSession(_req) });
 
   res.json({
     queue

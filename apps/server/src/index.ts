@@ -6,10 +6,10 @@ import { fileURLToPath } from 'node:url';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import type { CorsOptions } from 'cors';
-import dotenv from 'dotenv';
 import express from 'express';
 import { Server as SocketIOServer } from 'socket.io';
 
+import './lib/env.js';
 import moderationRouter from './routes/moderation.js';
 import queueRouter from './routes/queue.js';
 import roundsRouter from './routes/rounds.js';
@@ -26,15 +26,18 @@ import { queueEvents } from './events/queueEvents.js';
 import { roundsEvents } from './events/roundEvents.js';
 import { queueService } from './services/queueService.js';
 
-dotenv.config();
-
 const PORT = Number(process.env.PORT ?? 3000);
 const allowedOrigins = (process.env.CORS_ORIGIN ?? '').split(',').map((origin) => origin.trim()).filter(Boolean);
+const allowedOriginSet = new Set(allowedOrigins.map(normalizeOrigin));
 const moduleDir = path.dirname(fileURLToPath(import.meta.url));
 const webDistDir = path.resolve(moduleDir, '..', '..', 'web', 'dist');
 
 const corsOptions: CorsOptions = {
-  origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+  origin: allowedOrigins.length > 0
+    ? (origin, callback) => {
+        callback(null, !origin || allowedOriginSet.has(normalizeOrigin(origin)));
+      }
+    : true,
   credentials: true
 };
 
@@ -89,7 +92,11 @@ const httpServer = http.createServer(app);
 
 const io = new SocketIOServer(httpServer, {
   cors: {
-    origin: allowedOrigins.length > 0 ? allowedOrigins : '*',
+    origin: allowedOrigins.length > 0
+      ? (origin, callback) => {
+          callback(null, !origin || allowedOriginSet.has(normalizeOrigin(origin)));
+        }
+      : '*',
     credentials: allowedOrigins.length > 0
   }
 });
@@ -105,3 +112,14 @@ roundsEvents.initialize(io);
 httpServer.listen(PORT, () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
+function normalizeOrigin(origin: string) {
+  try {
+    const url = new URL(origin);
+    url.protocol = url.protocol.toLowerCase();
+    url.hostname = url.hostname.toLowerCase();
+    return url.origin;
+  } catch {
+    return origin.trim().toLowerCase().replace(/\/$/, '');
+  }
+}

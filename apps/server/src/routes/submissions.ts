@@ -8,10 +8,12 @@ import { z } from 'zod';
 
 import { prisma } from '../lib/prisma.js';
 import { getPublicPathForFile, getUploadsDir } from '../lib/storage.js';
-import { createSubmission, ensureSubmitter } from '../services/submitterService.js';
+import { createSubmission, ensureSubmitter, getSubmitterSubmissions } from '../services/submitterService.js';
 import { queueService } from '../services/queueService.js';
 import { SUBMITTER_COOKIE } from '../utils/constants.js';
 import { queueEvents } from '../events/queueEvents.js';
+import { deleteCharacter } from '../services/moderationService.js';
+import { requireControlAuth } from '../middleware/controlAuth.js';
 
 const router: Router = createRouter();
 
@@ -99,13 +101,17 @@ router.post('/', upload.single('image'), async (req, res) => {
       }
     });
 
+    const submitterSubmissions = await getSubmitterSubmissions(submitter.token);
+
     return res.status(202).json({
       message: 'Submission received',
       submissionId: result.characterId,
       queuePosition: result.queuePosition,
       remainingSlots: result.remainingSlots,
       status: result.status,
-      imagePath: imageSource
+      imagePath: imageSource,
+      submissions: submitterSubmissions.submissions,
+      submissionLimit: submitterSubmissions.submissionLimit
     });
   } catch (error) {
     if (typeof error === 'object' && error && 'code' in error && (error as any).code === 'SUBMISSION_LIMIT') {
@@ -122,6 +128,12 @@ router.post('/', upload.single('image'), async (req, res) => {
   }
 });
 
+router.get('/mine', async (req, res) => {
+  const token = req.cookies[SUBMITTER_COOKIE] as string | undefined;
+  const result = await getSubmitterSubmissions(token);
+  res.json(result);
+});
+
 router.get('/status/:id', async (req, res) => {
   const character = await prisma.character.findUnique({
     where: { id: req.params.id },
@@ -136,10 +148,33 @@ router.get('/status/:id', async (req, res) => {
 
   return res.json({
     submissionId: character.id,
+    name: character.name,
+    series: character.series ?? null,
     status: character.status,
     position: character.queuePosition?.position ?? null,
-    imagePath: character.imagePath
+    imagePath: character.imagePath,
+    rejectionReason: character.rejectionReason ?? null
   });
+});
+
+router.delete('/:id', requireControlAuth, async (req, res) => {
+  try {
+    await deleteCharacter(req.params.id);
+    return res.json({ message: 'Submission deleted', submissionId: req.params.id });
+  } catch (error) {
+    const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : undefined;
+
+    if (code === 'CHARACTER_NOT_FOUND') {
+      return res.status(404).json({ message: 'Submission not found', code });
+    }
+
+    if (code === 'CHARACTER_LIVE') {
+      return res.status(409).json({ message: 'Cannot delete a live character', code });
+    }
+
+    console.error('Delete submission error', error);
+    return res.status(500).json({ message: 'Failed to delete submission' });
+  }
 });
 
 export default router;

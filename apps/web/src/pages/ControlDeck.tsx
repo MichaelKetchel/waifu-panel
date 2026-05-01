@@ -10,10 +10,12 @@ import { useRoundState } from '../socket/useRoundState';
 import { resolveImageUrl } from '../utils/media';
 import { endRound, startRound, skipRound } from '../api/rounds';
 import { fetchControlStatus, loginControl, logoutControl } from '../api/auth';
+import { deleteSubmission } from '../api/submissions';
 
 type ControlDialog =
   | { type: 'reject'; entry: QueueEntry; reason: string }
   | { type: 'skip-entry'; entry: QueueEntry }
+  | { type: 'delete-entry'; entry: QueueEntry }
   | { type: 'skip-round'; roundId: string; characterName: string }
   | null;
 
@@ -64,6 +66,17 @@ export function ControlDeck() {
     }
   });
 
+  const deleteSubmissionMutation = useMutation({
+    mutationFn: deleteSubmission,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['queue'] });
+    },
+    onError: (error: any) => {
+      const message = error?.body?.message ?? error?.message ?? 'Failed to delete submission';
+      setControlError(message);
+    }
+  });
+
   const startRoundMutation = useMutation({
     mutationFn: startRound,
     onError: (error: any) => {
@@ -93,7 +106,7 @@ export function ControlDeck() {
   const nextUp = queue[0] ?? null;
   const currentRound = roundState.data;
   const nextUpIsApproved = nextUp?.status === 'approved';
-  const queueActionPending = moderationMutation.isPending || moveQueueMutation.isPending;
+  const queueActionPending = moderationMutation.isPending || moveQueueMutation.isPending || deleteSubmissionMutation.isPending;
 
   const queueMessage = useMemo(() => {
     if (queueQuery.isLoading && isAuthed) return 'Loading queue…';
@@ -156,17 +169,22 @@ export function ControlDeck() {
     moveQueueMutation.mutate({ characterId: entry.id, position });
   };
 
+  const handleDeleteQueueItem = (entry: QueueEntry) => {
+    if (deleteSubmissionMutation.isPending) return;
+    setDialog({ type: 'delete-entry', entry });
+  };
+
   const updateRejectReason = (reason: string) => {
     setDialog((current) => (current?.type === 'reject' ? { ...current, reason } : current));
   };
 
   const closeDialog = () => {
-    if (moderationMutation.isPending || skipRoundMutation.isPending) return;
+    if (moderationMutation.isPending || skipRoundMutation.isPending || deleteSubmissionMutation.isPending) return;
     setDialog(null);
   };
 
   const confirmDialog = () => {
-    if (!dialog || moderationMutation.isPending || skipRoundMutation.isPending) return;
+    if (!dialog || moderationMutation.isPending || skipRoundMutation.isPending || deleteSubmissionMutation.isPending) return;
 
     setControlError(null);
 
@@ -182,6 +200,12 @@ export function ControlDeck() {
 
     if (dialog.type === 'skip-entry') {
       moderationMutation.mutate({ characterId: dialog.entry.id, action: 'skip' });
+      setDialog(null);
+      return;
+    }
+
+    if (dialog.type === 'delete-entry') {
+      deleteSubmissionMutation.mutate(dialog.entry.id);
       setDialog(null);
       return;
     }
@@ -335,6 +359,7 @@ export function ControlDeck() {
                   canMoveDown={index < queue.length - 1}
                   isMutating={queueActionPending}
                   onModerate={handleModeration}
+                  onDelete={handleDeleteQueueItem}
                   onMove={handleMoveQueueItem}
                 />
               ))}
@@ -345,7 +370,7 @@ export function ControlDeck() {
 
       <ControlActionDialog
         dialog={dialog}
-        isPending={moderationMutation.isPending || skipRoundMutation.isPending}
+        isPending={moderationMutation.isPending || skipRoundMutation.isPending || deleteSubmissionMutation.isPending}
         onCancel={closeDialog}
         onConfirm={confirmDialog}
         onReasonChange={updateRejectReason}
@@ -374,10 +399,18 @@ function ControlActionDialog({
       ? `Reject ${dialog.entry.name}`
       : dialog.type === 'skip-entry'
         ? `Skip ${dialog.entry.name}`
+        : dialog.type === 'delete-entry'
+          ? `Delete ${dialog.entry.name}`
         : `Skip ${dialog.characterName}`;
 
   const confirmLabel =
-    dialog.type === 'reject' ? 'Reject' : dialog.type === 'skip-entry' ? 'Skip Submission' : 'Skip Round';
+    dialog.type === 'reject'
+      ? 'Reject'
+      : dialog.type === 'skip-entry'
+        ? 'Skip Submission'
+        : dialog.type === 'delete-entry'
+          ? 'Delete'
+          : 'Skip Round';
 
   return (
     <div className="modal-backdrop" role="presentation">
@@ -395,6 +428,8 @@ function ControlActionDialog({
           </label>
         ) : dialog.type === 'skip-entry' ? (
           <p className="muted">This removes the submission from the active queue without changing the current round.</p>
+        ) : dialog.type === 'delete-entry' ? (
+          <p className="muted">This permanently removes the submission and any finished round data tied to it.</p>
         ) : (
           <p className="muted">This closes the current round and discards its audience votes.</p>
         )}
@@ -493,6 +528,7 @@ function NextUpCard({
 function QueueListItem({
   entry,
   onModerate,
+  onDelete,
   onMove,
   place,
   canMoveUp,
@@ -501,6 +537,7 @@ function QueueListItem({
 }: {
   entry: QueueEntry;
   onModerate: (entry: QueueEntry, action: ModerationAction) => void;
+  onDelete: (entry: QueueEntry) => void;
   onMove: (entry: QueueEntry, position: number) => void;
   place: number;
   canMoveUp: boolean;
@@ -542,6 +579,9 @@ function QueueListItem({
         </button>
         <button type="button" className="ghost" disabled={isMutating} onClick={() => onModerate(entry, 'skip')}>
           Skip
+        </button>
+        <button type="button" className="ghost" disabled={isMutating} onClick={() => onDelete(entry)}>
+          Delete
         </button>
       </div>
     </li>

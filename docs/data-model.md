@@ -35,6 +35,7 @@ Use the `token` to identify anonymous guests and enforce submission/vote limits.
 | `image_path`   | string         | Path or URL to stored image.                                                    |
 | `status`       | enum           | `queued`, `approved`, `rejected`, `live`, `archived`.                           |
 | `tags`         | string?        | Optional metadata for filtering.                                               |
+| `rejection_reason` | string?   | Moderator-provided reason shown back to the submitter when rejected.            |
 | `created_at`   | timestamp      | Default `now()`.                                                                |
 | `updated_at`   | timestamp      | Updated whenever moderation status changes.                                     |
 | `moderated_by` | UUID?          | FK → `users.id` (control panel admins).                                         |

@@ -13,11 +13,13 @@ The practical goal is a reliable show-day tool first. Cloud deployment, desktop 
 - Monorepo with `apps/server`, `apps/web`, and `packages/shared`.
 - Server uses Express, Socket.IO, Prisma, and SQLite.
 - Web uses React, Vite, React Router, and TanStack Query.
-- Implemented flows include submission intake, image upload or URL fallback, submitter cookies, queue snapshots, moderation actions, round start/end, current-round fetch, vote submission, and live queue/round/vote broadcasts.
+- Implemented flows include submission intake, image upload or URL fallback, submitter cookies, submitter-specific submission history, queue snapshots, moderation actions, round start/end, current-round fetch, vote submission, and live queue/round/vote broadcasts.
 - Control auth exists for REST routes through a passcode-backed cookie.
 - The control socket namespace now uses the same passcode-backed cookie boundary as REST control routes.
 - Socket namespaces publish `state:init` snapshots for reconnect hydration and still support narrower queue/round events.
 - Queue movement is available through REST and a control socket event.
+- Public display/audience queue snapshots only expose approved upcoming submissions.
+- Rejected submissions are retained with optional rejection reasons for the submitting client and do not count against the active submission limit.
 - The built web app is served by the server when `apps/web/dist` exists.
 - Docker packaging exists through `Dockerfile` and `docker-compose.yml`.
 - `packages/shared` now contains the frontend-facing queue, round, tally, and snapshot contracts.
@@ -27,6 +29,7 @@ The practical goal is a reliable show-day tool first. Cloud deployment, desktop 
 - `pnpm install --frozen-lockfile` succeeds after dependency postinstall scripts can run.
 - `pnpm setup` installs dependencies and generates Prisma Client.
 - Server build/test scripts generate Prisma Client before running.
+- Server runtime and Prisma scripts default `DATABASE_URL` to local SQLite at `apps/data/app.db` when no env file is present.
 - `pnpm build` passes.
 - `pnpm test` passes.
 - `pnpm lint` passes.
@@ -38,6 +41,7 @@ The practical goal is a reliable show-day tool first. Cloud deployment, desktop 
 - Compose smoke test passes for `/healthz`, `/`, `/control`, `/display`, `/audience`, `/api/characters/queue`, and control auth.
 - Node in the inspected environment was `v22.22.2`; docs recommend Node 20 for database tasks.
 - Focused web build/lint passes after replacing Control Deck blocking prompts with in-app dialogs.
+- Smoke-tested submitter history, public queue visibility, rejection reason persistence, rejection limit restoration, and manual delete endpoint on a local server.
 
 ## Documentation Reality
 
@@ -79,12 +83,15 @@ Known drift and recent reconciliation:
 - Completed: control deck exposes up/down queue movement.
 - Completed: `end round` and `skip round` are separate; skipped round votes are discarded.
 - Completed: moderation no longer overwrites submitted descriptions with rejection/skip reasons.
+- Completed: rejection reasons persist separately from descriptions and rejected submissions remain visible to the submitter.
+- Completed: manual submission delete endpoint and Control Deck delete action exist for non-live submissions.
 - Partially completed: clearer API errors exist for round, queue move, and moderation-not-found paths; broader route consistency still needs review.
 
 ### Phase 3: Reconcile Realtime Behavior
 
 - Completed: `state:init` snapshots include queue, active round, upcoming entries, and basic settings.
 - Completed: control socket auth matches REST control auth.
+- Completed: display/audience/submission realtime snapshots and display queue updates hide unapproved submissions.
 - Decide which actions are REST-only, socket-only, or dual-path with acknowledgements.
 - Partially completed: queue move has REST and socket paths; submission notifications exist; settings update events do not.
 - Throttle live vote progress if needed for venue networks.
@@ -110,6 +117,8 @@ Known drift and recent reconciliation:
 - Add frontend tests where state transitions are risky, especially control deck and audience voting.
 - Check display and control views on projector/mobile-sized layouts before show-day use.
 - Completed: Control Deck no longer relies on blocking browser prompts/alerts/confirms for moderator workflows.
+- Completed: submitter page shows persistent per-device submissions, thumbnails, status, queue position, remaining slots, and rejection reason.
+- Completed: audience voting keeps showing ended-round tallies with percentages until the next round replaces them.
 - Improve copy and state handling for network loss, reconnects, and duplicate actions.
 
 ### Phase 7: Later Extensions

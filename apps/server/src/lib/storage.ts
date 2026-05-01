@@ -1,15 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+
+import { prismaDir } from './env.js';
 
 type StorageDriver = 'local';
 
 const storageDriver = (process.env.STORAGE_DRIVER ?? 'local') as StorageDriver;
 const rawLocalPath = process.env.STORAGE_LOCAL_PATH ?? '../../data/uploads';
-
-const moduleDir = path.dirname(fileURLToPath(import.meta.url));
-export const serverRoot = path.resolve(moduleDir, '..', '..');
-export const prismaDir = path.resolve(serverRoot, 'prisma');
 
 export function resolveFromPrismaDir(targetPath: string) {
   return path.isAbsolute(targetPath) ? targetPath : path.resolve(prismaDir, targetPath);

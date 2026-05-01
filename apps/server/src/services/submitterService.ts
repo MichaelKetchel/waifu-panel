@@ -17,6 +17,17 @@ export interface SubmissionResult {
   remainingSlots: number;
 }
 
+export interface SubmitterSubmission {
+  submissionId: string;
+  name: string;
+  series: string | null;
+  imagePath: string;
+  status: string;
+  queuePosition: number | null;
+  rejectionReason: string | null;
+  createdAt: string;
+}
+
 export async function ensureSubmitter(token?: string) {
   if (token) {
     const existing = await prisma.submitter.findUnique({ where: { token } });
@@ -37,15 +48,7 @@ export async function ensureSubmitter(token?: string) {
 
 export async function createSubmission(submitterId: string, payload: SubmissionPayload): Promise<SubmissionResult> {
   const submissionLimit = getSubmissionLimit();
-
-  const activeCount = await prisma.character.count({
-    where: {
-      submitterId,
-      status: {
-        in: [CHARACTER_STATUSES.QUEUED, CHARACTER_STATUSES.APPROVED, CHARACTER_STATUSES.LIVE]
-      }
-    }
-  });
+  const activeCount = await countLimitActiveSubmissions(submitterId);
 
   if (activeCount >= submissionLimit) {
     throw Object.assign(new Error('Submission limit reached'), { code: 'SUBMISSION_LIMIT' });
@@ -86,5 +89,62 @@ export async function createSubmission(submitterId: string, payload: SubmissionP
       status: character.status,
       remainingSlots: Math.max(remainingSlots, 0)
     };
+  });
+}
+
+export async function getSubmitterSubmissions(token?: string) {
+  const submissionLimit = getSubmissionLimit();
+
+  if (!token) {
+    return {
+      submissions: [] as SubmitterSubmission[],
+      remainingSlots: submissionLimit,
+      submissionLimit
+    };
+  }
+
+  const submitter = await prisma.submitter.findUnique({ where: { token } });
+
+  if (!submitter) {
+    return {
+      submissions: [] as SubmitterSubmission[],
+      remainingSlots: submissionLimit,
+      submissionLimit
+    };
+  }
+
+  const [activeCount, submissions] = await Promise.all([
+    countLimitActiveSubmissions(submitter.id),
+    prisma.character.findMany({
+      where: { submitterId: submitter.id },
+      include: { queuePosition: true },
+      orderBy: { createdAt: 'desc' }
+    })
+  ]);
+
+  return {
+    submissions: submissions.map((submission) => ({
+      submissionId: submission.id,
+      name: submission.name,
+      series: submission.series ?? null,
+      imagePath: submission.imagePath,
+      status: submission.status,
+      queuePosition: submission.queuePosition?.position ?? null,
+      rejectionReason: submission.rejectionReason ?? null,
+      createdAt: submission.createdAt.toISOString()
+    })),
+    remainingSlots: Math.max(submissionLimit - activeCount, 0),
+    submissionLimit
+  };
+}
+
+function countLimitActiveSubmissions(submitterId: string) {
+  return prisma.character.count({
+    where: {
+      submitterId,
+      status: {
+        in: [CHARACTER_STATUSES.QUEUED, CHARACTER_STATUSES.APPROVED, CHARACTER_STATUSES.LIVE]
+      }
+    }
   });
 }

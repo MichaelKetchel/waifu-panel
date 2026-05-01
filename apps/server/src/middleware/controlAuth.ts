@@ -1,10 +1,12 @@
 import crypto from 'node:crypto';
 import type { Request, Response, NextFunction } from 'express';
 
+import '../lib/env.js';
+
 export const CONTROL_COOKIE = 'control_session';
 
 function computeToken() {
-  const passcode = process.env.CONTROL_PASSCODE ?? '';
+  const passcode = process.env.CONTROL_PASSCODE?.trim() ?? '';
   const sessionSecret = process.env.SESSION_SECRET ?? 'waifu-panel';
   return crypto.createHash('sha256').update(`${passcode}:${sessionSecret}`).digest('hex');
 }
@@ -15,7 +17,7 @@ export function hasValidControlSession(req: Request) {
 }
 
 export function hasValidControlToken(token?: string) {
-  if (!token || !process.env.CONTROL_PASSCODE) return false;
+  if (!token || !process.env.CONTROL_PASSCODE?.trim()) return false;
   return token === computeToken();
 }
 
@@ -33,7 +35,7 @@ export function clearControlSession(res: Response) {
 }
 
 export function requireControlAuth(req: Request, res: Response, next: NextFunction) {
-  if (!process.env.CONTROL_PASSCODE) {
+  if (!process.env.CONTROL_PASSCODE?.trim()) {
     return res.status(500).json({ message: 'CONTROL_PASSCODE not configured' });
   }
 

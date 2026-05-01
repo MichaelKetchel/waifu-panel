@@ -2,8 +2,15 @@ import { queueService } from './queueService.js';
 import { getCurrentRound } from './roundService.js';
 import { getSubmissionLimit, VOTE_MODES } from '../utils/constants.js';
 
-export async function getStateSnapshot() {
-  const [queue, activeRound] = await Promise.all([queueService.snapshot(), getCurrentRound()]);
+interface StateSnapshotOptions {
+  approvedQueueOnly?: boolean;
+}
+
+export async function getStateSnapshot(options: StateSnapshotOptions = {}) {
+  const [queue, activeRound] = await Promise.all([
+    queueService.snapshot({ approvedOnly: options.approvedQueueOnly }),
+    getCurrentRound()
+  ]);
 
   return {
     schemaVersion: 1,

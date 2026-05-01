@@ -8,10 +8,10 @@ export function registerAudienceNamespace(io: SocketIOServer) {
 
   namespace.on('connection', async (socket) => {
     roundsEvents.registerAudienceSocket(socket);
-    socket.emit('state:init', await getStateSnapshot());
+    socket.emit('state:init', await getStateSnapshot({ approvedQueueOnly: true }));
 
     socket.on('state:request', async () => {
-      socket.emit('state:init', await getStateSnapshot());
+      socket.emit('state:init', await getStateSnapshot({ approvedQueueOnly: true }));
     });
   });
 }

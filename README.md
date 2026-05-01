@@ -49,11 +49,19 @@ Client-side env vars (via Vite) can live in `apps/web/.env.local`:
 
 ## Database
 
-Prisma is configured for SQLite by default. Migration commands need a fully-qualified `DATABASE_URL` (absolute path recommended, e.g. `file:/home/.../data/app.db`). Node 22 works when that env var is set; if you hit engine errors, falling back to Node 20 is still a safe option.
+Prisma is configured for SQLite by default. If `DATABASE_URL` is not set, server runtime and Prisma scripts use `file:../../data/app.db` relative to `apps/server/prisma`, which resolves to `apps/data/app.db`.
+
+Use an absolute `DATABASE_URL` when you want an explicit database location:
 
 ```bash
 # from repo root
 export DATABASE_URL="file:${PWD}/apps/data/app.db"
+pnpm db:migrate -- --name init
+```
+
+Or use the default path directly:
+
+```bash
 pnpm db:migrate -- --name init
 ```
 
@@ -75,7 +83,9 @@ Starts on `http://localhost:3000`, serving REST endpoints:
 
 - `GET /healthz` — process, database, and queue health.
 - `POST /api/submissions` — submission intake with lightweight cookie tracking.
+- `GET /api/submissions/mine` — this device's submissions, remaining active slots, and rejection reasons.
 - `GET /api/submissions/status/:id` — submission status.
+- `DELETE /api/submissions/:id` — manual moderator delete for non-live submissions.
 - `GET /api/characters/queue` — current queue snapshot.
 - `PATCH /api/characters/queue/:characterId` — move a queued character, control auth required.
 - `POST /api/moderation/:characterId` — approve/reject/skip.
@@ -98,6 +108,20 @@ To run both development servers:
 
 ```bash
 pnpm dev
+```
+
+To make both development servers reachable from phones or other devices on the same network:
+
+```bash
+pnpm dev:lan
+```
+
+If auto-detection picks the wrong interface, pass the LAN IP explicitly:
+
+```bash
+LAN_IP=192.168.1.42 pnpm dev:lan
+# or
+pnpm dev:lan -- 192.168.1.42
 ```
 
 ## Build & Test

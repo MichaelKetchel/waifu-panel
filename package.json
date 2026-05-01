@@ -6,6 +6,7 @@
   "scripts": {
     "setup": "pnpm install --frozen-lockfile && pnpm db:generate",
     "dev": "pnpm -r --parallel --filter @waifu-panel/server --filter @waifu-panel/web dev",
+    "dev:lan": "sh scripts/dev-lan.sh",
     "dev:server": "pnpm --filter @waifu-panel/server dev",
     "dev:web": "pnpm --filter @waifu-panel/web dev",
     "build": "pnpm -r build",

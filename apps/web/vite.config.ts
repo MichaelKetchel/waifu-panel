@@ -15,8 +15,10 @@ export default defineConfig(({ mode }) => {
       }
     },
     server: {
+      host: env.HOST ?? 'localhost',
       port: 5173,
       open: true,
+      allowedHosts: true,
       proxy: {
         '/uploads': {
           target: apiBaseUrl,

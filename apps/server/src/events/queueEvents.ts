@@ -31,10 +31,10 @@ class QueueEvents {
     this.displayNs = server.of('/display');
   }
 
-  broadcastQueueUpdate(payload: QueueUpdatePayload) {
+  broadcastQueueUpdate(payload: QueueUpdatePayload, displayPayload = payload) {
     if (!this.controlNs || !this.displayNs) return;
     this.controlNs.emit('queue:updated', payload);
-    this.displayNs.emit('queue:updated', payload);
+    this.displayNs.emit('queue:updated', displayPayload);
   }
 
   broadcastSubmissionReceived(payload: SubmissionReceivedPayload) {

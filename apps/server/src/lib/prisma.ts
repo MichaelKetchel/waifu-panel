@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { PrismaClient } from '@prisma/client';
 
+import './env.js';
 import { resolveFromPrismaDir } from './storage.js';
 
 const rawDatabaseUrl = process.env.DATABASE_URL;

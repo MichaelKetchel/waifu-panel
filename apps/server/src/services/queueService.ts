@@ -34,8 +34,19 @@ export function reorderQueueEntries(
   }));
 }
 
-async function snapshot() {
+interface QueueSnapshotOptions {
+  approvedOnly?: boolean;
+}
+
+async function snapshot(options: QueueSnapshotOptions = {}) {
   const queued = await prisma.queuePosition.findMany({
+    where: options.approvedOnly
+      ? {
+          character: {
+            status: CHARACTER_STATUSES.APPROVED
+          }
+        }
+      : undefined,
     include: {
       character: true
     },
@@ -118,7 +129,8 @@ async function compactPositions(client: QueuePositionClient = prisma) {
 
 async function publishSnapshot() {
   const queue = await snapshot();
-  queueEvents.broadcastQueueUpdate({ queue });
+  const approvedQueue = queue.filter((entry) => entry.status === CHARACTER_STATUSES.APPROVED);
+  queueEvents.broadcastQueueUpdate({ queue }, { queue: approvedQueue });
   return queue;
 }
 

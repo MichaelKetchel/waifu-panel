@@ -6,14 +6,14 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "prisma generate && tsc -p tsconfig.build.json",
+    "build": "pnpm prisma:generate && tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
-    "test": "prisma generate && vitest --run",
+    "test": "pnpm prisma:generate && vitest --run",
     "test:watch": "vitest",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev",
-    "prisma:deploy": "prisma migrate deploy"
+    "prisma:generate": "DATABASE_URL=${DATABASE_URL:-file:../../data/app.db} prisma generate",
+    "prisma:migrate": "DATABASE_URL=${DATABASE_URL:-file:../../data/app.db} prisma migrate dev",
+    "prisma:deploy": "DATABASE_URL=${DATABASE_URL:-file:../../data/app.db} prisma migrate deploy"
   },
   "dependencies": {
     "@prisma/client": "^5.16.1",

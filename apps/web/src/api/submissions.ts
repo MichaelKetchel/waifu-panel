@@ -1,4 +1,6 @@
 import { apiFetch } from './client';
+import type { CharacterStatus } from '@waifu-panel/shared';
+
 export interface SubmissionInput {
   name: string;
   series?: string;
@@ -12,8 +14,27 @@ export interface SubmissionResponse {
   submissionId: string;
   queuePosition: number;
   remainingSlots: number;
-  status: string;
+  status: CharacterStatus;
   imagePath: string;
+  submissions: SubmitterSubmission[];
+  submissionLimit: number;
+}
+
+export interface SubmitterSubmission {
+  submissionId: string;
+  name: string;
+  series: string | null;
+  imagePath: string;
+  status: CharacterStatus;
+  queuePosition: number | null;
+  rejectionReason: string | null;
+  createdAt: string;
+}
+
+export interface MySubmissionsResponse {
+  submissions: SubmitterSubmission[];
+  remainingSlots: number;
+  submissionLimit: number;
 }
 
 export function submitCharacter(payload: SubmissionInput) {
@@ -30,5 +51,15 @@ export function submitCharacter(payload: SubmissionInput) {
   return apiFetch<SubmissionResponse>('/api/submissions', {
     method: 'POST',
     body: formData
+  });
+}
+
+export function fetchMySubmissions() {
+  return apiFetch<MySubmissionsResponse>('/api/submissions/mine');
+}
+
+export function deleteSubmission(submissionId: string) {
+  return apiFetch<{ message: string; submissionId: string }>(`/api/submissions/${submissionId}`, {
+    method: 'DELETE'
   });
 }

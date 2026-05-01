@@ -8,7 +8,7 @@ export function registerSubmissionNamespace(io: SocketIOServer) {
     socket.emit('submission:welcome', { message: 'Submission channel ready' });
 
     socket.on('state:request', async () => {
-      socket.emit('state:init', await getStateSnapshot());
+      socket.emit('state:init', await getStateSnapshot({ approvedQueueOnly: true }));
     });
   });
 }

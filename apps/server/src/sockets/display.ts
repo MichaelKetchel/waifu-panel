@@ -7,12 +7,12 @@ export function registerDisplayNamespace(io: SocketIOServer) {
   const namespace = io.of('/display');
 
   namespace.on('connection', async (socket) => {
-    const queue = await queueService.snapshot();
-    socket.emit('state:init', await getStateSnapshot());
+    const queue = await queueService.snapshot({ approvedOnly: true });
+    socket.emit('state:init', await getStateSnapshot({ approvedQueueOnly: true }));
     socket.emit('queue:updated', { queue });
 
     socket.on('state:request', async () => {
-      socket.emit('state:init', await getStateSnapshot());
+      socket.emit('state:init', await getStateSnapshot({ approvedQueueOnly: true }));
     });
   });
 }

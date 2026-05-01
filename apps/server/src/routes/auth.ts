@@ -15,7 +15,9 @@ const loginSchema = z.object({
 });
 
 router.post('/control', (req, res) => {
-  if (!process.env.CONTROL_PASSCODE) {
+  const controlPasscode = process.env.CONTROL_PASSCODE?.trim();
+
+  if (!controlPasscode) {
     return res.status(500).json({ message: 'CONTROL_PASSCODE not configured' });
   }
 
@@ -24,7 +26,7 @@ router.post('/control', (req, res) => {
     return res.status(400).json({ message: 'Passcode required' });
   }
 
-  if (parseResult.data.passcode !== process.env.CONTROL_PASSCODE) {
+  if (parseResult.data.passcode !== controlPasscode) {
     return res.status(401).json({ authenticated: false });
   }
 

@@ -19,7 +19,7 @@ export function DisplayBoard() {
     refetchInterval: false
   });
 
-  const queue = queueQuery.data?.queue ?? [];
+  const queue = (queueQuery.data?.queue ?? []).filter((entry) => entry.status === 'approved');
   const upcoming = queue.slice(0, 3);
   const currentRound = roundQuery.data;
 
@@ -106,14 +106,24 @@ function YesNoTallies({ tallies }: { tallies: Array<{ value: number; count: numb
 function ScaleTallies({ round }: { round: NonNullable<ReturnType<typeof useRoundState>['data']> }) {
   const votesByValue = new Map(round.tallies.map((entry) => [entry.value, entry.count]));
   const values = Array.from({ length: round.scale.max - round.scale.min + 1 }, (_, idx) => round.scale.min + idx);
+  const maxCount = Math.max(...values.map((value) => votesByValue.get(value) ?? 0), 1);
+  const totalVotes = round.tallies.reduce((sum, entry) => sum + entry.count, 0);
+
   return (
-    <div className="scale-tally-grid">
+    <div className="scale-bar-chart" aria-label="Vote distribution">
       {values.map((value) => (
-        <div key={value} className="scale-tally-cell">
-          <span className="scale-tally-value">{value}</span>
-          <span className="scale-tally-count">{votesByValue.get(value) ?? 0}</span>
+        <div key={value} className="scale-bar-chart__row">
+          <span className="scale-bar-chart__label">{value}</span>
+          <div className="scale-bar-chart__track">
+            <div
+              className="scale-bar-chart__bar"
+              style={{ width: `${((votesByValue.get(value) ?? 0) / maxCount) * 100}%` }}
+            />
+          </div>
+          <span className="scale-bar-chart__count">{votesByValue.get(value) ?? 0}</span>
         </div>
       ))}
+      <p className="muted small-text">{totalVotes} vote{totalVotes === 1 ? '' : 's'} counted</p>
     </div>
   );
 }
