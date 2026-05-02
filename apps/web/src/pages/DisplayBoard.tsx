@@ -142,8 +142,8 @@ function LiveRoundBoard({round, audienceUrl}: {
       <div className="display-metadata live-metadata">
           <div>
               <h1 className="character-name">{round.character.name}</h1>
-              {round.character.series && <h2 className="character-series">{round.character.series}</h2>}
-              {round.character.submitterAlias && <h2 className="muted character-submitter">{round.character.submitterAlias}</h2>}
+              {round.character.series && <h2 className="character-series">From {round.character.series}</h2>}
+              {round.character.submitterAlias && <h2 className="muted character-submitter">Thanks to: {round.character.submitterAlias}</h2>}
           </div>
 
 

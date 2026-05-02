@@ -393,7 +393,7 @@ button:not(:disabled):hover {
 }
 
 .projector-board--live {
-  grid-template-columns: minmax(0, 1.7fr) minmax(380px, 0.8fr);
+  grid-template-columns: minmax(0, 1.6fr) minmax(380px, 1.0fr);
 }
 
 .projector-board .display-image {
@@ -896,32 +896,32 @@ button.ghost:not(:disabled):hover {
 }
 
 .live-metadata .character-name {
-  font-size: clamp(3rem, 5.7vw, 6.5rem);
+  font-size: clamp(3rem, 4.5vw, 6.5rem);
   line-height: 0.95;
   margin: 0;
 }
 
 .live-metadata .character-series {
-  font-size: clamp(2rem, 3vw, 5.5rem);
+  font-size: clamp(2rem, 2.5vw, 5.5rem);
   line-height: 1;
   margin: 0;
 
 }
 
 .live-metadata .character-submitter {
-  font-size: clamp(2rem, 3vw, 5.5rem);
+  font-size: clamp(1.5rem, 2vw, 5rem);
   line-height: 1;
   margin: 0;
 }
 
 .live-metadata h3 {
-  font-size: clamp(1.5rem, 1.5vw, 5.5rem);
+  font-size: clamp(1.5rem, 1vw, 3.5rem);
   line-height: 0.95;
   margin: 0;
 }
 
 .live-metadata .character-desc {
-  font-size: clamp(1.5rem, 2.5vw, 5.5rem);
+  font-size: clamp(1rem, 1.5vw, 4rem);
   line-height: 0.95;
   margin: 0;
 }
@@ -980,7 +980,7 @@ button.ghost:not(:disabled):hover {
 }
 
 .scale-bar-chart__track {
-  height: 2.25rem;
+  height: 2rem;
   border-radius: 999px;
   overflow: hidden;
   background: rgba(10, 12, 22, 0.85);
@@ -1029,7 +1029,7 @@ button.ghost:not(:disabled):hover {
 @media (max-width: 900px) {
   .projector-board,
   .projector-board--live {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr ;
   }
 
   .projector__upcoming,
