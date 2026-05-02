@@ -8,62 +8,62 @@ datasource db {
 }
 
 model Submitter {
-  id        String      @id @default(uuid())
-  token     String      @unique
-  email     String?     @unique
-  alias     String?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id         String      @id @default(uuid())
+  token      String      @unique
+  email      String?     @unique
+  alias      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
   characters Character[]
   votes      Vote[]
 }
 
 model Character {
-  id          String      @id @default(uuid())
-  submitter   Submitter?  @relation(fields: [submitterId], references: [id])
-  submitterId String?
-  name        String
-  series      String?
-  description String?
-  imagePath   String
-  status      String   @default("queued")
-  tags        String?
+  id              String     @id @default(uuid())
+  submitter       Submitter? @relation(fields: [submitterId], references: [id])
+  submitterId     String?
+  name            String
+  series          String?
+  description     String?
+  imagePath       String
+  status          String     @default("queued")
+  tags            String?
   rejectionReason String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  moderatedBy String?
-  moderatedAt DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  moderatedBy     String?
+  moderatedAt     DateTime?
 
   queuePosition QueuePosition?
   rounds        Round[]
 }
 
 model Round {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   character   Character @relation(fields: [characterId], references: [id])
-  characterId String   @unique
+  characterId String    @unique
   mode        String
-  scaleMin    Int      @default(1)
-  scaleMax    Int      @default(5)
-  startedAt   DateTime @default(now())
+  scaleMin    Int       @default(1)
+  scaleMax    Int       @default(5)
+  startedAt   DateTime  @default(now())
   endedAt     DateTime?
   votes       Vote[]
 }
 
 model Vote {
-  id           String    @id @default(uuid())
-  round        Round     @relation(fields: [roundId], references: [id])
-  roundId      String
-  submitter    Submitter? @relation(fields: [submitterId], references: [id])
-  submitterId  String?
-  anonToken    String?
-  value        Int
-  createdAt    DateTime @default(now())
-  clientMeta   String?
+  id          String     @id @default(uuid())
+  round       Round      @relation(fields: [roundId], references: [id])
+  roundId     String
+  submitter   Submitter? @relation(fields: [submitterId], references: [id])
+  submitterId String?
+  anonToken   String?
+  value       Int
+  createdAt   DateTime   @default(now())
+  clientMeta  String?
 
-  @@index([roundId])
   @@unique([roundId, submitterId])
   @@unique([roundId, anonToken])
+  @@index([roundId])
 }
 
 model QueuePosition {
@@ -71,11 +71,11 @@ model QueuePosition {
   character   Character @relation(fields: [characterId], references: [id])
   characterId String    @unique
   position    Int
-  insertedAt  DateTime @default(now())
+  insertedAt  DateTime  @default(now())
 }
 
 model Setting {
-  key       String  @id
+  key       String   @id
   value     String
   updatedAt DateTime @updatedAt
 }

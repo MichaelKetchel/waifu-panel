@@ -67,6 +67,11 @@ export interface SettingsPayload {
   requirePasscode: boolean;
 }
 
+export interface PublicConfig {
+  frontendBaseUrl: string;
+  backendBaseUrl: string;
+}
+
 export interface RoundStartedPayload {
   round: {
     id: string;

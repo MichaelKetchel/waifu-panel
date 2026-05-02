@@ -4,11 +4,12 @@ import { AudienceVoting } from './pages/AudienceVoting';
 import { ControlDeck } from './pages/ControlDeck';
 import { DisplayBoard } from './pages/DisplayBoard';
 import { SubmissionPortal } from './pages/SubmissionPortal';
+import { APP_ROUTES } from './routes';
 
 function App() {
   const location = useLocation();
 
-  if (location.pathname === '/display') {
+  if (location.pathname === APP_ROUTES.display) {
     return <DisplayBoard />;
   }
 
@@ -20,21 +21,22 @@ function App() {
           <p className="muted">Your waifu sucks. We&apos;re here to prove your questionable taste.</p>
         </div>
         <nav>
-          <NavLink to="/" end>
-            Submission
+          <NavLink to={APP_ROUTES.submission} end>
+            Submit
           </NavLink>
-          <NavLink to="/audience">Audience</NavLink>
-          <NavLink to="/display">Display</NavLink>
-          <NavLink to="/control">Control</NavLink>
+          <NavLink to={APP_ROUTES.audience}>Vote</NavLink>
+          {/*<NavLink to="/display">Display</NavLink>*/}
+          {/*<NavLink to="/control">Control</NavLink>*/}
         </nav>
       </header>
 
       <main>
         <Routes>
-          <Route path="/" element={<SubmissionPortal />} />
-          <Route path="/audience" element={<AudienceVoting />} />
-          <Route path="/display" element={<DisplayBoard />} />
-          <Route path="/control" element={<ControlDeck />} />
+          <Route path={APP_ROUTES.submission} element={<SubmissionPortal />} />
+          <Route path={APP_ROUTES.audienceAlias} element={<AudienceVoting />} />
+          <Route path={APP_ROUTES.audience} element={<AudienceVoting />} />
+          <Route path={APP_ROUTES.display} element={<DisplayBoard />} />
+          <Route path={APP_ROUTES.control} element={<ControlDeck />} />
         </Routes>
       </main>
     </div>

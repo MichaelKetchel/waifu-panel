@@ -34,8 +34,9 @@ EOF
 fi
 
 export HOST=0.0.0.0
+export PUBLIC_FRONTEND_URL="http://${LAN_IP}:5173"
+export PUBLIC_BACKEND_URL="http://${LAN_IP}:3000"
 export VITE_API_BASE_URL="http://${LAN_IP}:3000"
-export VITE_SOCKET_URL="$VITE_API_BASE_URL"
 
 LAN_IP_LOWER="$(printf '%s' "$LAN_IP" | tr '[:upper:]' '[:lower:]')"
 DEFAULT_CORS_ORIGIN="http://localhost:5173,http://${LAN_IP}:5173"

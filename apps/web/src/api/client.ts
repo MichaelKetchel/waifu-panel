@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000';
+import { getBackendBaseUrl } from '../config/publicConfig';
 
 interface RequestOptions extends RequestInit {
   parseJson?: boolean;
@@ -14,7 +14,7 @@ export async function apiFetch<TResponse>(path: string, options: RequestOptions 
     finalHeaders.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${getBackendBaseUrl()}${path}`, {
     credentials: 'include',
     headers: finalHeaders,
     body,

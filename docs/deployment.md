@@ -19,10 +19,19 @@ All configuration flows through environment variables. A `.env.example` will mir
 | `STORAGE_DRIVER` | Storage backend; only `local` is implemented today | `local` |
 | `STORAGE_LOCAL_PATH` | Directory for uploads when `local` | `./data/uploads` |
 | `PUBLIC_BASE_URL` | Optional absolute base URL for generated upload links | unset |
+| `PUBLIC_FRONTEND_URL` | Public frontend base URL for generated audience links and the Display QR code | request origin |
+| `PUBLIC_BACKEND_URL` | Public backend base URL for REST, uploads, and sockets | `PUBLIC_BASE_URL`, then request origin |
 | `CONTROL_PASSCODE` | Simple shared secret for the control deck | unset |
 | `SUBMISSION_LIMIT` | Max submissions per token per event | `3` |
 | `SESSION_SECRET` | Cookie signing secret; set a non-default value for show mode | `waifu-panel` fallback |
 | `CORS_ORIGIN` | Comma-separated frontend origins for dev mode | unset |
+
+Client-side Vite configuration:
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `VITE_API_BASE_URL` | Backend target for the Vite dev proxy | `http://localhost:3000` |
+| `VITE_CONFIG_URL` | Optional public config endpoint override | `/api/config/public` |
 
 ## Local Development Workflow
 
@@ -32,8 +41,8 @@ All configuration flows through environment variables. A `.env.example` will mir
    - `pnpm dev:server` — Express + Socket.IO with auto-reload.
    - `pnpm dev:web` — Vite dev server for React app.
    - `pnpm dev` — concurrently run both.
-   - `pnpm dev:lan` — run migrations, bind Vite to the LAN, and configure frontend API/socket URLs for other devices.
-4. Access the submission page at `http://localhost:5173`, audience page at `/audience`, display at `/display`, and control deck at `/control`.
+   - `pnpm dev:lan` — run migrations, bind Vite to the LAN, and configure server-owned public frontend/backend URLs for other devices.
+4. Access the submission page at `http://localhost:5173`, audience page at `/vote` (`/audience` also works), display at `/display`, and control deck at `/control`.
 
 ### Offline Simulation
 
@@ -115,7 +124,7 @@ Postgres, S3-compatible storage, Supabase, and external auth are not wired into 
 3. Set `CORS_ORIGIN` to every dev frontend origin if running Vite; Compose show mode on port 3000 usually does not need it.
 4. Start show mode with `docker compose up -d` and verify `http://localhost:3000/healthz`.
 5. Open `/control`, log in, and verify queue movement, approve/reject/skip, start, end, and skip-round controls.
-6. Open `/display` on the projector machine and `/audience` on at least one phone.
+6. Open `/display` on the projector machine and `/vote` on at least one phone.
 7. Submit a few test characters, approve them, start both Yes/No and 1-5 rounds, and confirm live tallies update.
 8. Back up `./data` after rehearsal content is loaded.
 9. Keep a second browser/device logged into the control deck and keep a copy of the Compose image plus `./data` on a backup laptop.

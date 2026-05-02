@@ -1,10 +1,9 @@
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? 'http://localhost:3000';
+import { getBackendBaseUrl } from '../config/publicConfig';
 
 export function resolveImageUrl(imagePath: string) {
   if (!imagePath) return '';
   if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
     return imagePath;
   }
-  const base = API_BASE.replace(/\/$/, '');
-  return `${base}${imagePath}`;
+  return `${getBackendBaseUrl()}${imagePath}`;
 }

@@ -1,6 +1,6 @@
 # Waifu Panel Project Plan
 
-Last updated: 2026-05-01
+Last updated: 2026-05-02
 
 ## Purpose
 
@@ -23,6 +23,8 @@ The practical goal is a reliable show-day tool first. Cloud deployment, desktop 
 - The built web app is served by the server when `apps/web/dist` exists.
 - Docker packaging exists through `Dockerfile` and `docker-compose.yml`.
 - `packages/shared` now contains the frontend-facing queue, round, tally, and snapshot contracts.
+- The server exposes public runtime config through `/api/config/public`; the frontend consumes frontend/backend base URLs from that config for REST, uploads, sockets, and generated links.
+- Frontend route paths live in a shared web route resolver; the Display page QR code targets the audience voting route through that resolver.
 
 ## Verified State
 
@@ -41,6 +43,9 @@ The practical goal is a reliable show-day tool first. Cloud deployment, desktop 
 - Compose smoke test passes for `/healthz`, `/`, `/control`, `/display`, `/audience`, `/api/characters/queue`, and control auth.
 - Node in the inspected environment was `v22.22.2`; docs recommend Node 20 for database tasks.
 - Focused web build/lint passes after replacing Control Deck blocking prompts with in-app dialogs.
+- `pnpm test` and `pnpm lint` pass after the server-owned public config and Display QR work.
+- `pnpm --filter @waifu-panel/shared build` and `pnpm --filter @waifu-panel/web build` pass after the server-owned public config and Display QR work.
+- Server build passes with Prisma Client owning `Character.rejectionReason` after regenerating Prisma artifacts outside the sandbox.
 - Smoke-tested submitter history, public queue visibility, rejection reason persistence, rejection limit restoration, and manual delete endpoint on a local server.
 
 ## Documentation Reality
@@ -119,6 +124,7 @@ Known drift and recent reconciliation:
 - Completed: Control Deck no longer relies on blocking browser prompts/alerts/confirms for moderator workflows.
 - Completed: submitter page shows persistent per-device submissions, thumbnails, status, queue position, remaining slots, and rejection reason.
 - Completed: audience voting keeps showing ended-round tallies with percentages until the next round replaces them.
+- Completed: display board shows a QR code linking to the audience page using server-owned runtime public config and the frontend route resolver.
 - Improve copy and state handling for network loss, reconnects, and duplicate actions.
 
 ### Phase 7: Later Extensions

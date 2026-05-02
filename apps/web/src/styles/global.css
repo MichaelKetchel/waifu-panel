@@ -780,9 +780,73 @@ button.ghost:not(:disabled):hover {
 }
 
 .projector__status {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 1rem;
+}
+
+.projector__status-copy {
   display: grid;
   justify-items: end;
   gap: 0.35rem;
+}
+
+.audience-qr {
+  width: min(36vw, 430px);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(10, 12, 22, 0.72);
+}
+
+.audience-qr__code,
+.audience-qr__fallback {
+  width: clamp(5.5rem, 8vw, 8rem);
+  aspect-ratio: 1;
+  border-radius: 6px;
+}
+
+.audience-qr__code {
+  display: block;
+}
+
+.audience-qr__fallback {
+  display: grid;
+  place-items: center;
+  padding: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(226, 232, 240, 0.7);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.audience-qr__details {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+  text-align: left;
+}
+
+.audience-qr__label {
+  color: rgba(226, 232, 240, 0.72);
+  font-size: clamp(0.75rem, 1vw, 0.95rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.audience-qr__url {
+  color: #fff;
+  font-size: clamp(0.85rem, 1.25vw, 1.1rem);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .projector__stage {
@@ -934,7 +998,16 @@ button.ghost:not(:disabled):hover {
   }
 
   .projector__status {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .projector__status-copy {
     justify-items: start;
+  }
+
+  .audience-qr {
+    width: min(100%, 430px);
   }
 
   .upcoming-list-detailed {

@@ -1,15 +1,12 @@
 import { io, type Socket } from 'socket.io-client';
 
-const SOCKETS = new Map<string, Socket>();
+import { getSocketBaseUrl } from '../config/publicConfig';
 
-function getBaseUrl() {
-  const base = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';
-  return base.replace(/\/$/, '');
-}
+const SOCKETS = new Map<string, Socket>();
 
 export function getSocket(namespace: string): Socket {
   if (!SOCKETS.has(namespace)) {
-    const socket = io(`${getBaseUrl()}${namespace}`, {
+    const socket = io(`${getSocketBaseUrl()}${namespace}`, {
       withCredentials: true,
       transports: ['websocket']
     });

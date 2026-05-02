@@ -153,11 +153,11 @@ export function SubmissionPortal() {
         </label>
 
         <label className="field">
-          <span>Why should we roast them?</span>
+          <span>Defend your waifu! (Or don't, you chaotic bastard...)</span>
           <textarea
             value={description}
             onChange={(event) => setDescription(event.target.value)}
-            placeholder="Give us your best elevator pitch."
+            placeholder={name ? name + " is the best because..." : "Sell me on it. You won't."}
           />
         </label>
 

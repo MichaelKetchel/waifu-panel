@@ -20,9 +20,18 @@ export default defineConfig(({ mode }) => {
       open: true,
       allowedHosts: true,
       proxy: {
+        '/api': {
+          target: apiBaseUrl,
+          changeOrigin: false
+        },
         '/uploads': {
           target: apiBaseUrl,
-          changeOrigin: true
+          changeOrigin: false
+        },
+        '/socket.io': {
+          target: apiBaseUrl,
+          changeOrigin: false,
+          ws: true
         }
       }
     }

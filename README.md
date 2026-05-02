@@ -42,10 +42,15 @@ cp apps/server/.env.example apps/server/.env
 
 Ensure `CORS_ORIGIN` lists the frontend origin (e.g. `http://localhost:5173`). Multiple origins can be comma-separated.
 
+The server is the runtime source of truth for public addresses through `GET /api/config/public`:
+
+- `PUBLIC_FRONTEND_URL` — optional public frontend base URL used for generated audience links and the Display QR code; defaults to the request origin.
+- `PUBLIC_BACKEND_URL` — optional public backend base URL used for REST, uploads, and sockets; defaults to `PUBLIC_BASE_URL`, then the request origin.
+
 Client-side env vars (via Vite) can live in `apps/web/.env.local`:
 
-- `VITE_API_BASE_URL` — defaults to `http://localhost:3000`.
-- `VITE_SOCKET_URL` — optional override if websocket endpoint differs from the API base.
+- `VITE_API_BASE_URL` — backend target for the Vite dev proxy; defaults to `http://localhost:3000`.
+- `VITE_CONFIG_URL` — optional config endpoint override; defaults to `/api/config/public`.
 
 ## Database
 
@@ -102,7 +107,7 @@ Starts on `http://localhost:3000`, serving REST endpoints:
 pnpm dev:web
 ```
 
-Launches Vite on `http://localhost:5173`. The submission page is wired to the API (`VITE_API_BASE_URL` defaults to `http://localhost:3000`). Attendees can upload images directly or fall back to a hosted image URL.
+Launches Vite on `http://localhost:5173`. The submission page is wired to the API through the Vite dev proxy (`VITE_API_BASE_URL` defaults to `http://localhost:3000`). Attendees can upload images directly or fall back to a hosted image URL.
 
 To run both development servers:
 
@@ -115,6 +120,8 @@ To make both development servers reachable from phones or other devices on the s
 ```bash
 pnpm dev:lan
 ```
+
+This is the preferred show-floor development command. It exports server-owned `PUBLIC_FRONTEND_URL` and `PUBLIC_BACKEND_URL` values from the detected LAN IP, so the Display QR code points phones at the reachable voting page.
 
 If auto-detection picks the wrong interface, pass the LAN IP explicitly:
 

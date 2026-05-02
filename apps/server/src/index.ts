@@ -16,6 +16,7 @@ import roundsRouter from './routes/rounds.js';
 import submissionsRouter from './routes/submissions.js';
 import votesRouter from './routes/votes.js';
 import authRouter from './routes/auth.js';
+import configRouter from './routes/config.js';
 import { getUploadsDir } from './lib/storage.js';
 import { prisma } from './lib/prisma.js';
 import { registerControlNamespace } from './sockets/control.js';
@@ -75,6 +76,7 @@ app.use('/api/moderation', moderationRouter);
 app.use('/api/rounds', roundsRouter);
 app.use('/api/votes', votesRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/config', configRouter);
 
 if (fs.existsSync(webDistDir)) {
   app.use(express.static(webDistDir));

@@ -1,8 +1,12 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
 import { fetchQueue } from '../api/queue';
+import { usePublicConfig } from '../config/publicConfig';
+import { resolveFrontendRoute } from '../routes';
 import { useQueueSocket } from '../socket/useQueueSocket';
 import { resolveImageUrl } from '../utils/media';
+import { createQrCode } from '../utils/qr';
 import { useRoundSocket } from '../socket/useRoundSocket';
 import { useRoundState } from '../socket/useRoundState';
 
@@ -22,6 +26,8 @@ export function DisplayBoard() {
   const queue = (queueQuery.data?.queue ?? []).filter((entry) => entry.status === 'approved');
   const upcoming = queue.slice(0, 3);
   const currentRound = roundQuery.data;
+  const { frontendBaseUrl } = usePublicConfig();
+  const audienceUrl = resolveFrontendRoute('audience', frontendBaseUrl);
 
   return (
     <section className="projector">
@@ -31,10 +37,13 @@ export function DisplayBoard() {
           <h1>{currentRound ? 'Current Roast' : queue.length > 0 ? 'Next Up' : 'Submissions Open'}</h1>
         </div>
         <div className="projector__status">
-          <span className={`status-tag ${currentRound ? 'status-tag--live' : 'status-tag--disabled'}`}>
-            {currentRound ? currentRound.status : 'Idle'}
-          </span>
-          <span className="muted">Vote on your phone</span>
+          <div className="projector__status-copy">
+            <span className={`status-tag ${currentRound ? 'status-tag--live' : 'status-tag--disabled'}`}>
+              {currentRound ? currentRound.status : 'Idle'}
+            </span>
+            <span className="muted">Vote on your phone</span>
+          </div>
+          <AudienceQrCode url={audienceUrl} />
         </div>
       </header>
 
@@ -57,6 +66,47 @@ export function DisplayBoard() {
       </footer>
     </section>
   );
+}
+
+function AudienceQrCode({ url }: { url: string }) {
+  const qr = useMemo(() => createQrCode(url), [url]);
+
+  return (
+    <div className="audience-qr">
+      {qr ? <QrSvg modules={qr.modules} /> : <div className="audience-qr__fallback">QR unavailable</div>}
+      <div className="audience-qr__details">
+        <span className="audience-qr__label">Scan to vote</span>
+        <strong className="audience-qr__url">{formatDisplayUrl(url)}</strong>
+      </div>
+    </div>
+  );
+}
+
+function QrSvg({ modules }: { modules: boolean[][] }) {
+  const quietZone = 4;
+  const size = modules.length;
+  const viewSize = size + quietZone * 2;
+  const darkPath = modules
+    .flatMap((row, y) =>
+      row.map((isDark, x) => (isDark ? `M${x + quietZone} ${y + quietZone}h1v1h-1z` : '')).filter(Boolean)
+    )
+    .join('');
+
+  return (
+    <svg className="audience-qr__code" viewBox={`0 0 ${viewSize} ${viewSize}`} role="img" aria-label="QR code for audience voting">
+      <rect width={viewSize} height={viewSize} fill="#fff" />
+      <path d={darkPath} fill="#05070d" />
+    </svg>
+  );
+}
+
+function formatDisplayUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.host}${parsed.pathname}`;
+  } catch {
+    return url;
+  }
 }
 
 function LiveRoundBoard({ round }: { round: NonNullable<ReturnType<typeof useRoundState>['data']> }) {
