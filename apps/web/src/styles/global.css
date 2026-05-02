@@ -403,7 +403,7 @@ button:not(:disabled):hover {
 
 .projector-board .display-metadata {
   min-width: 0;
-  align-content: center;
+  align-content: space-between;
 }
 
 .display-image {
@@ -780,9 +780,12 @@ button.ghost:not(:disabled):hover {
 }
 
 .projector__status {
+  position: fixed;
+  top: 1em;
+  right: 1em;
   display: flex;
   justify-content: flex-end;
-  align-items: center;
+  align-items: end;
   gap: 1rem;
 }
 
@@ -792,10 +795,23 @@ button.ghost:not(:disabled):hover {
   gap: 0.35rem;
 }
 
+.audience-qr-wrapper {
+  display: flex ;
+  flex-direction: row;
+  align-items: flex-end;
+}
+/*.audience-qr-wrapper .audience-qr {*/
+
+/*  align-items: center;*/
+/*  justify-content: center;*/
+/*}*/
+
+
 .audience-qr {
-  width: min(36vw, 430px);
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  /*width: min(1vw, 430px);*/
+
+  display: block;
+  grid-template-columns: 1fr;
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0.75rem;
@@ -806,7 +822,7 @@ button.ghost:not(:disabled):hover {
 
 .audience-qr__code,
 .audience-qr__fallback {
-  width: clamp(5.5rem, 8vw, 8rem);
+  width: clamp(6rem, 40vw, 25rem);
   aspect-ratio: 1;
   border-radius: 6px;
 }
@@ -879,8 +895,33 @@ button.ghost:not(:disabled):hover {
   white-space: nowrap;
 }
 
-.live-metadata h1 {
+.live-metadata .character-name {
   font-size: clamp(3rem, 5.7vw, 6.5rem);
+  line-height: 0.95;
+  margin: 0;
+}
+
+.live-metadata .character-series {
+  font-size: clamp(2rem, 3vw, 5.5rem);
+  line-height: 1;
+  margin: 0;
+
+}
+
+.live-metadata .character-submitter {
+  font-size: clamp(2rem, 3vw, 5.5rem);
+  line-height: 1;
+  margin: 0;
+}
+
+.live-metadata h3 {
+  font-size: clamp(1.5rem, 1.5vw, 5.5rem);
+  line-height: 0.95;
+  margin: 0;
+}
+
+.live-metadata .character-desc {
+  font-size: clamp(1.5rem, 2.5vw, 5.5rem);
   line-height: 0.95;
   margin: 0;
 }

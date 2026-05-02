@@ -5,6 +5,7 @@ import { resolveFrontendRoute, type AppRouteKey } from '../routes';
 
 const DEFAULT_DEV_FRONTEND_BASE_URL = 'http://localhost:5173';
 const DEFAULT_DEV_BACKEND_BASE_URL = 'http://localhost:3000';
+const DEFAULT_SUBMISSION_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
 const CONFIG_ENDPOINT = cleanBaseUrl(import.meta.env.VITE_CONFIG_URL)?.replace(/\/$/, '') ?? '/api/config/public';
 
 const PublicConfigContext = createContext<PublicConfig | null>(null);
@@ -106,11 +107,21 @@ export function getFrontendUrl(route: AppRouteKey) {
 
 function normalizePublicConfig(config: PublicConfig): PublicConfig {
   const frontendBaseUrl = cleanBaseUrl(config.frontendBaseUrl) ?? DEFAULT_DEV_FRONTEND_BASE_URL;
-  const backendBaseUrl = cleanBaseUrl(config.backendBaseUrl) ?? DEFAULT_DEV_BACKEND_BASE_URL;
+  const configuredBackend = cleanBaseUrl(config.backendBaseUrl) ?? DEFAULT_DEV_BACKEND_BASE_URL;
+  // If the configured backend is cross-origin from the current page, use the current
+  // origin instead so requests route through the dev proxy and cookies stay same-origin.
+  const pageOrigin = getBrowserOrigin();
+  const backendBaseUrl =
+    pageOrigin && isCrossOrigin(configuredBackend, pageOrigin) ? pageOrigin : configuredBackend;
+  const submissionImageMaxBytes =
+    Number.isFinite(config.submissionImageMaxBytes) && config.submissionImageMaxBytes > 0
+      ? config.submissionImageMaxBytes
+      : DEFAULT_SUBMISSION_IMAGE_MAX_BYTES;
 
   return {
     frontendBaseUrl,
-    backendBaseUrl
+    backendBaseUrl,
+    submissionImageMaxBytes
   };
 }
 
@@ -120,7 +131,8 @@ function createFallbackConfig(): PublicConfig {
 
   return {
     frontendBaseUrl,
-    backendBaseUrl
+    backendBaseUrl,
+    submissionImageMaxBytes: DEFAULT_SUBMISSION_IMAGE_MAX_BYTES
   };
 }
 
@@ -132,4 +144,12 @@ function getBrowserOrigin() {
 function cleanBaseUrl(value: string | undefined) {
   const trimmed = value?.trim();
   return trimmed ? trimmed.replace(/\/$/, '') : undefined;
+}
+
+function isCrossOrigin(url: string, pageOrigin: string) {
+  try {
+    return new URL(url).origin !== pageOrigin;
+  } catch {
+    return false;
+  }
 }

@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { Router as createRouter } from 'express';
-import type { Router } from 'express';
+import type { RequestHandler, Router } from 'express';
 import multer from 'multer';
 import { z } from 'zod';
 
@@ -10,7 +10,7 @@ import { prisma } from '../lib/prisma.js';
 import { getPublicPathForFile, getUploadsDir } from '../lib/storage.js';
 import { createSubmission, ensureSubmitter, getSubmitterSubmissions } from '../services/submitterService.js';
 import { queueService } from '../services/queueService.js';
-import { SUBMITTER_COOKIE } from '../utils/constants.js';
+import { getSubmissionImageMaxBytes, SUBMITTER_COOKIE } from '../utils/constants.js';
 import { queueEvents } from '../events/queueEvents.js';
 import { deleteCharacter } from '../services/moderationService.js';
 import { requireControlAuth } from '../middleware/controlAuth.js';
@@ -21,6 +21,7 @@ const submissionSchema = z.object({
   name: z.string().min(1),
   series: z.string().optional(),
   description: z.string().optional(),
+  submitterAlias: z.string().max(64).optional(),
   imageUrl: z.string().url().optional()
 });
 
@@ -43,11 +44,33 @@ const upload = multer({
     cb(null, true);
   },
   limits: {
-    fileSize: 5 * 1024 * 1024 // 5MB
+    fileSize: getSubmissionImageMaxBytes()
   }
 });
 
-router.post('/', upload.single('image'), async (req, res) => {
+const uploadSubmissionImage: RequestHandler = (req, res, next) => {
+  upload.single('image')(req, res, (error: unknown) => {
+    if (!error) {
+      return next();
+    }
+
+    if (error instanceof multer.MulterError && error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        message: `Image uploads must be ${formatFileSize(getSubmissionImageMaxBytes())} or smaller.`,
+        code: 'SUBMISSION_IMAGE_TOO_LARGE',
+        maxBytes: getSubmissionImageMaxBytes()
+      });
+    }
+
+    if (error instanceof Error && error.message === 'Only image uploads are allowed.') {
+      return res.status(400).json({ message: error.message, code: 'SUBMISSION_IMAGE_INVALID_TYPE' });
+    }
+
+    return next(error);
+  });
+};
+
+router.post('/', uploadSubmissionImage, async (req, res) => {
   const cleanupUploadedFile = async () => {
     if (req.file) {
       try {
@@ -87,6 +110,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       name: parseResult.data.name,
       series: parseResult.data.series,
       description: parseResult.data.description,
+      submitterAlias: parseResult.data.submitterAlias,
       imagePath: imageSource
     });
 
@@ -176,5 +200,10 @@ router.delete('/:id', requireControlAuth, async (req, res) => {
     return res.status(500).json({ message: 'Failed to delete submission' });
   }
 });
+
+function formatFileSize(bytes: number) {
+  const mb = bytes / 1024 / 1024;
+  return `${Number.isInteger(mb) ? mb : Number(mb.toFixed(1))}MB`;
+}
 
 export default router;

@@ -5,6 +5,7 @@ export interface CharacterSummary {
   id: string;
   name: string;
   series: string | null;
+  description?: string | null;
   imagePath: string;
   submitterAlias?: string | null;
   status?: CharacterStatus;
@@ -16,6 +17,8 @@ export interface QueueEntry {
   status: CharacterStatus;
   name: string;
   series: string | null;
+  description?: string | null;
+  submitterAlias?: string | null;
   imagePath: string;
 }
 
@@ -70,6 +73,7 @@ export interface SettingsPayload {
 export interface PublicConfig {
   frontendBaseUrl: string;
   backendBaseUrl: string;
+  submissionImageMaxBytes: number;
 }
 
 export interface RoundStartedPayload {

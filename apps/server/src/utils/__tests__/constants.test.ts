@@ -1,16 +1,20 @@
 import { describe, expect, it, afterEach } from 'vitest';
 
-import { getSubmissionLimit } from '../../utils/constants.js';
+import { getSubmissionImageMaxBytes, getSubmissionLimit } from '../../utils/constants.js';
 
-const originalEnv = process.env.SUBMISSION_LIMIT;
+const originalEnv = {
+  SUBMISSION_LIMIT: process.env.SUBMISSION_LIMIT,
+  SUBMISSION_IMAGE_MAX_MB: process.env.SUBMISSION_IMAGE_MAX_MB
+};
 
 afterEach(() => {
-  process.env.SUBMISSION_LIMIT = originalEnv;
+  restoreEnv('SUBMISSION_LIMIT', originalEnv.SUBMISSION_LIMIT);
+  restoreEnv('SUBMISSION_IMAGE_MAX_MB', originalEnv.SUBMISSION_IMAGE_MAX_MB);
 });
 
 describe('getSubmissionLimit', () => {
   it('falls back to default when unset', () => {
-    process.env.SUBMISSION_LIMIT = undefined;
+    delete process.env.SUBMISSION_LIMIT;
     expect(getSubmissionLimit()).toBe(3);
   });
 
@@ -29,3 +33,39 @@ describe('getSubmissionLimit', () => {
     expect(getSubmissionLimit()).toBe(3);
   });
 });
+
+describe('getSubmissionImageMaxBytes', () => {
+  it('falls back to 5MB when unset', () => {
+    delete process.env.SUBMISSION_IMAGE_MAX_MB;
+    expect(getSubmissionImageMaxBytes()).toBe(5 * 1024 * 1024);
+  });
+
+  it('returns configured megabytes as bytes', () => {
+    process.env.SUBMISSION_IMAGE_MAX_MB = '8';
+    expect(getSubmissionImageMaxBytes()).toBe(8 * 1024 * 1024);
+  });
+
+  it('allows fractional megabyte limits', () => {
+    process.env.SUBMISSION_IMAGE_MAX_MB = '0.5';
+    expect(getSubmissionImageMaxBytes()).toBe(512 * 1024);
+  });
+
+  it('coerces invalid values to the 5MB default', () => {
+    process.env.SUBMISSION_IMAGE_MAX_MB = 'not-a-number';
+    expect(getSubmissionImageMaxBytes()).toBe(5 * 1024 * 1024);
+  });
+
+  it('guards against zero or negative values', () => {
+    process.env.SUBMISSION_IMAGE_MAX_MB = '0';
+    expect(getSubmissionImageMaxBytes()).toBe(5 * 1024 * 1024);
+  });
+});
+
+function restoreEnv(key: keyof typeof originalEnv, value: string | undefined) {
+  if (value === undefined) {
+    delete process.env[key];
+    return;
+  }
+
+  process.env[key] = value;
+}

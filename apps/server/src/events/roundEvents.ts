@@ -14,6 +14,8 @@ interface RoundStartPayload {
       name: string;
       imagePath: string;
       series?: string | null;
+      description?: string | null;
+      submitterAlias?: string | null;
     };
   };
 }

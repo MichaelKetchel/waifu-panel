@@ -1,6 +1,8 @@
 import type { Request } from 'express';
 import type { PublicConfig } from '@waifu-panel/shared';
 
+import { getSubmissionImageMaxBytes } from '../utils/constants.js';
+
 const DEFAULT_PUBLIC_ORIGIN = `http://localhost:${process.env.PORT ?? 3000}`;
 
 export function buildPublicConfig(req: Pick<Request, 'headers' | 'protocol' | 'secure'>): PublicConfig {
@@ -10,7 +12,8 @@ export function buildPublicConfig(req: Pick<Request, 'headers' | 'protocol' | 's
 
   return {
     frontendBaseUrl,
-    backendBaseUrl
+    backendBaseUrl,
+    submissionImageMaxBytes: getSubmissionImageMaxBytes()
   };
 }
 

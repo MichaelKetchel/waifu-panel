@@ -7,6 +7,7 @@ export interface SubmissionPayload {
   name: string;
   series?: string;
   description?: string;
+  submitterAlias?: string;
   imagePath: string;
 }
 
@@ -68,6 +69,7 @@ export async function createSubmission(submitterId: string, payload: SubmissionP
         name: payload.name,
         series: payload.series,
         description: payload.description,
+        submitterAlias: payload.submitterAlias,
         imagePath: payload.imagePath,
         status: CHARACTER_STATUSES.QUEUED,
         queuePosition: {

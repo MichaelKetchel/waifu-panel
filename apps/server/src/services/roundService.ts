@@ -79,7 +79,9 @@ export async function startRound({ characterId, mode, scale }: StartRoundInput) 
         id: round.character.id,
         name: round.character.name,
         imagePath: round.character.imagePath,
-        series: round.character.series ?? null
+        series: round.character.series ?? null,
+        description: round.character.description ?? null,
+        submitterAlias: round.character.submitterAlias ?? null
       }
     }
   });
@@ -240,7 +242,9 @@ export async function getCurrentRound() {
       id: round.character.id,
       name: round.character.name,
       imagePath: round.character.imagePath,
-      series: round.character.series ?? null
+      series: round.character.series ?? null,
+      description: round.character.description ?? null,
+      submitterAlias: round.character.submitterAlias ?? null
     },
     mode: round.mode,
     scale: {

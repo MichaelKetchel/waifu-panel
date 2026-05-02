@@ -5,6 +5,7 @@ export interface SubmissionInput {
   name: string;
   series?: string;
   description?: string;
+  submitterAlias?: string;
   imageFile?: File | null;
   imageUrl?: string;
 }
@@ -42,6 +43,7 @@ export function submitCharacter(payload: SubmissionInput) {
   formData.append('name', payload.name);
   if (payload.series) formData.append('series', payload.series);
   if (payload.description) formData.append('description', payload.description);
+  if (payload.submitterAlias) formData.append('submitterAlias', payload.submitterAlias);
   if (payload.imageFile) {
     formData.append('image', payload.imageFile);
   } else if (payload.imageUrl) {

@@ -20,6 +20,8 @@ export async function getStateSnapshot(options: StateSnapshotOptions = {}) {
       id: entry.id,
       name: entry.name,
       series: entry.series,
+      description: entry.description ?? null,
+      submitterAlias: entry.submitterAlias ?? null,
       imagePath: entry.imagePath,
       status: entry.status
     })),

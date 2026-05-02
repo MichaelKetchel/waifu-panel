@@ -46,6 +46,7 @@ The server is the runtime source of truth for public addresses through `GET /api
 
 - `PUBLIC_FRONTEND_URL` — optional public frontend base URL used for generated audience links and the Display QR code; defaults to the request origin.
 - `PUBLIC_BACKEND_URL` — optional public backend base URL used for REST, uploads, and sockets; defaults to `PUBLIC_BASE_URL`, then the request origin.
+- `SUBMISSION_IMAGE_MAX_MB` — maximum uploaded image size for submissions, in megabytes; defaults to `5`.
 
 Client-side env vars (via Vite) can live in `apps/web/.env.local`:
 

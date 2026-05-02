@@ -5,13 +5,15 @@ import { buildPublicConfig } from '../publicConfigService.js';
 const originalEnv = {
   PUBLIC_BASE_URL: process.env.PUBLIC_BASE_URL,
   PUBLIC_BACKEND_URL: process.env.PUBLIC_BACKEND_URL,
-  PUBLIC_FRONTEND_URL: process.env.PUBLIC_FRONTEND_URL
+  PUBLIC_FRONTEND_URL: process.env.PUBLIC_FRONTEND_URL,
+  SUBMISSION_IMAGE_MAX_MB: process.env.SUBMISSION_IMAGE_MAX_MB
 };
 
 afterEach(() => {
   restoreEnv('PUBLIC_BASE_URL', originalEnv.PUBLIC_BASE_URL);
   restoreEnv('PUBLIC_BACKEND_URL', originalEnv.PUBLIC_BACKEND_URL);
   restoreEnv('PUBLIC_FRONTEND_URL', originalEnv.PUBLIC_FRONTEND_URL);
+  restoreEnv('SUBMISSION_IMAGE_MAX_MB', originalEnv.SUBMISSION_IMAGE_MAX_MB);
 });
 
 describe('buildPublicConfig', () => {
@@ -24,7 +26,8 @@ describe('buildPublicConfig', () => {
 
     expect(config).toEqual({
       frontendBaseUrl: 'http://panel-host.local:3000',
-      backendBaseUrl: 'http://panel-host.local:3000'
+      backendBaseUrl: 'http://panel-host.local:3000',
+      submissionImageMaxBytes: 5 * 1024 * 1024
     });
   });
 
@@ -40,7 +43,8 @@ describe('buildPublicConfig', () => {
 
     expect(config).toMatchObject({
       frontendBaseUrl: 'https://vote.example.test',
-      backendBaseUrl: 'https://api.example.test'
+      backendBaseUrl: 'https://api.example.test',
+      submissionImageMaxBytes: 5 * 1024 * 1024
     });
   });
 
@@ -57,6 +61,18 @@ describe('buildPublicConfig', () => {
 
     expect(config.frontendBaseUrl).toBe('https://panel.example.test');
     expect(config.backendBaseUrl).toBe('https://panel.example.test');
+  });
+
+  it('publishes the configured image upload size limit', () => {
+    process.env.SUBMISSION_IMAGE_MAX_MB = '2.5';
+
+    const config = buildPublicConfig({
+      headers: { host: 'panel.local:3000' },
+      protocol: 'http',
+      secure: false
+    });
+
+    expect(config.submissionImageMaxBytes).toBe(2.5 * 1024 * 1024);
   });
 });
 

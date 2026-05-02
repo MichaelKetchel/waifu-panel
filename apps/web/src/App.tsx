@@ -17,7 +17,7 @@ function App() {
     <div className="app-shell">
       <header className="top-bar">
         <div>
-          <h1>Waifu Panel</h1>
+          <h1>Your Waifu Ain't Shit!</h1>
           <p className="muted">Your waifu sucks. We&apos;re here to prove your questionable taste.</p>
         </div>
         <nav>

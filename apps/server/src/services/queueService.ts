@@ -61,6 +61,8 @@ async function snapshot(options: QueueSnapshotOptions = {}) {
     status: entry.character.status,
     name: entry.character.name,
     series: entry.character.series ?? null,
+    description: entry.character.description ?? null,
+    submitterAlias: entry.character.submitterAlias ?? null,
     imagePath: entry.character.imagePath
   }));
 }

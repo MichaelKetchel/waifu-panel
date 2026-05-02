@@ -9,6 +9,22 @@ import { resolveImageUrl } from '../utils/media';
 import { createQrCode } from '../utils/qr';
 import { useRoundSocket } from '../socket/useRoundSocket';
 import { useRoundState } from '../socket/useRoundState';
+import {getRandomItem} from "../utils/misc";
+
+
+export function trashSmall(name: string) {
+  let choices = [
+      name,
+      `${name}? Seriously?`,
+      `${name}. Again.`,
+      `${name}. Surprise, surprise.`,
+      `Who the fuck is ${name}?`,
+      `Gaze upon ${name} and weep.`,
+      `Is that....${name}?!`,
+
+  ]
+  return getRandomItem(choices)
+}
 
 export function DisplayBoard() {
   useQueueSocket('/display');
@@ -27,58 +43,63 @@ export function DisplayBoard() {
   const upcoming = queue.slice(0, 3);
   const currentRound = roundQuery.data;
   const { frontendBaseUrl } = usePublicConfig();
-  const audienceUrl = resolveFrontendRoute('audience', frontendBaseUrl);
+  // const audienceUrl = resolveFrontendRoute('audience', frontendBaseUrl);
+  const audienceUrl = resolveFrontendRoute('audience');
 
   return (
     <section className="projector">
       <header className="projector__header">
         <div>
-          <p className="projector__eyebrow">Waifu Panel Live</p>
-          <h1>{currentRound ? 'Current Roast' : queue.length > 0 ? 'Next Up' : 'Submissions Open'}</h1>
+          <p className="projector__eyebrow">Your Waifu Ain't Shit!</p>
+          <h1>{currentRound ? trashSmall(currentRound.character.name) : queue.length > 0 ? 'Next Up' : 'Submissions Open'}</h1>
         </div>
         <div className="projector__status">
           <div className="projector__status-copy">
             <span className={`status-tag ${currentRound ? 'status-tag--live' : 'status-tag--disabled'}`}>
               {currentRound ? currentRound.status : 'Idle'}
             </span>
-            <span className="muted">Vote on your phone</span>
           </div>
-          <AudienceQrCode url={audienceUrl} />
         </div>
       </header>
 
       <div className="projector__stage">
         {currentRound ? (
-          <LiveRoundBoard round={currentRound} />
-        ) : queue.length > 0 ? (
-          <UpcomingPreview next={queue[0]} upcoming={queue.slice(1, 4)} />
-        ) : (
+          <LiveRoundBoard round={currentRound} audienceUrl={audienceUrl}  />
+        )
+        //     : queue.length > 0 ? (
+        //   <UpcomingPreview next={queue[0]} upcoming={queue.slice(1, 4)} />
+        // )
+                : (
           <div className="projector__empty">
             <p>Submissions are open.</p>
-            <span className="muted">Approved characters will appear here.</span>
+            <span className="muted">Throw that bitch to the wolves!</span>
           </div>
         )}
       </div>
 
-      <footer className="projector__upcoming">
-        <h2>Up Next</h2>
-        {upcoming.length === 0 ? <p className="muted">More characters coming soon.</p> : <UpcomingList upcoming={upcoming} />}
-      </footer>
+      {/*<footer className="projector__upcoming">*/}
+      {/*  <h2>Up Next</h2>*/}
+      {/*  {upcoming.length === 0 ? <p className="muted">More characters coming soon.</p> : <UpcomingList upcoming={upcoming} />}*/}
+      {/*</footer>*/}
     </section>
   );
 }
 
-function AudienceQrCode({ url }: { url: string }) {
-  const qr = useMemo(() => createQrCode(url), [url]);
+function AudienceQrCode({ url }: { url: string|undefined }) {
+  const qr = url ? useMemo(() => createQrCode(url), [url]) : undefined;
 
   return (
-    <div className="audience-qr">
-      {qr ? <QrSvg modules={qr.modules} /> : <div className="audience-qr__fallback">QR unavailable</div>}
-      <div className="audience-qr__details">
-        <span className="audience-qr__label">Scan to vote</span>
-        <strong className="audience-qr__url">{formatDisplayUrl(url)}</strong>
+      <div className="audience-qr">
+              {/*<span className="audience-qr__label">Scan to vote</span>*/}
+        {qr ? <QrSvg modules={qr.modules} /> : <div className="audience-qr__fallback">QR unavailable</div>}
       </div>
-    </div>
+    // <div className="audience-qr">
+    //   {qr ? <QrSvg modules={qr.modules} /> : <div className="audience-qr__fallback">QR unavailable</div>}
+    //   <div className="audience-qr__details">
+    //     <span className="audience-qr__label">Scan to vote</span>
+    //     <strong className="audience-qr__url">{formatDisplayUrl(url)}</strong>
+    //   </div>
+    // </div>
   );
 }
 
@@ -109,17 +130,35 @@ function formatDisplayUrl(url: string) {
   }
 }
 
-function LiveRoundBoard({ round }: { round: NonNullable<ReturnType<typeof useRoundState>['data']> }) {
+function LiveRoundBoard({round, audienceUrl}: {
+    round: NonNullable<ReturnType<typeof useRoundState>['data']>,
+    audienceUrl?: string
+}) {
   return (
     <div className="projector-board projector-board--live">
       <div className="display-image">
         <img src={resolveImageUrl(round.character.imagePath)} alt="" />
       </div>
       <div className="display-metadata live-metadata">
-        <h1>{round.character.name}</h1>
-        {round.character.series && <p className="muted">{round.character.series}</p>}
+          <div>
+              <h1 className="character-name">{round.character.name}</h1>
+              {round.character.series && <h2 className="character-series">{round.character.series}</h2>}
+              {round.character.submitterAlias && <h2 className="muted character-submitter">{round.character.submitterAlias}</h2>}
+          </div>
+
+
+          <div>
+              <h3>You said:</h3>
+              <br/>
+              { round.character.description ?
+              <p className="character-desc" style={{ fontStyle: 'italic' }}>{round.character.description}</p>
+                  :
+                  <p className="character-desc" style={{ fontStyle: 'italic' }}>Absolutely nothing! You didn't even try to defend your waifu!</p>
+              }
+          </div>
 
         {round.mode === 'yn' ? <YesNoTallies tallies={round.tallies} /> : <ScaleTallies round={round} />}
+          <div className="audience-qr-wrapper"> <AudienceQrCode url={audienceUrl} /></div>
       </div>
     </div>
   );

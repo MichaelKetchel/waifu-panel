@@ -25,6 +25,7 @@ model Character {
   name            String
   series          String?
   description     String?
+  submitterAlias  String?
   imagePath       String
   status          String     @default("queued")
   tags            String?

@@ -20,11 +20,13 @@ The practical goal is a reliable show-day tool first. Cloud deployment, desktop 
 - Queue movement is available through REST and a control socket event.
 - Public display/audience queue snapshots only expose approved upcoming submissions.
 - Rejected submissions are retained with optional rejection reasons for the submitting client and do not count against the active submission limit.
+- Submission image uploads are capped by `SUBMISSION_IMAGE_MAX_MB` and the public runtime config exposes the active byte limit for client-side validation.
 - The built web app is served by the server when `apps/web/dist` exists.
 - Docker packaging exists through `Dockerfile` and `docker-compose.yml`.
 - `packages/shared` now contains the frontend-facing queue, round, tally, and snapshot contracts.
 - The server exposes public runtime config through `/api/config/public`; the frontend consumes frontend/backend base URLs from that config for REST, uploads, sockets, and generated links.
 - Frontend route paths live in a shared web route resolver; the Display page QR code targets the audience voting route through that resolver.
+- Runtime upload and networking dependencies are pinned to patched versions for the current production audit: Multer 2.1.x, Express 4.22.x, Socket.IO 4.8.x, React Router 6.30.x, plus pnpm overrides for patched `path-to-regexp`, `qs`, and `socket.io-parser`.
 
 ## Verified State
 
@@ -47,6 +49,7 @@ The practical goal is a reliable show-day tool first. Cloud deployment, desktop 
 - `pnpm --filter @waifu-panel/shared build` and `pnpm --filter @waifu-panel/web build` pass after the server-owned public config and Display QR work.
 - Server build passes with Prisma Client owning `Character.rejectionReason` after regenerating Prisma artifacts outside the sandbox.
 - Smoke-tested submitter history, public queue visibility, rejection reason persistence, rejection limit restoration, and manual delete endpoint on a local server.
+- Production dependency audit passes after upgrading Multer and related runtime dependencies; full dependency audit still reports dev-tooling advisories in ESLint/Vite/Vitest/Tailwind/tsup transitive packages.
 
 ## Documentation Reality
 
@@ -67,6 +70,7 @@ Known drift and recent reconciliation:
 - Keep REST, socket, and shared payload contracts explicit and consistent.
 - Make `packages/shared` the source of truth for public API/socket types once contracts stabilize.
 - Keep queue and round behavior conservative: only approved characters should be startable, ordering should be deterministic, and skip/end semantics should be unambiguous.
+- Keep uploaded images small enough for venue Wi-Fi and local disk responsiveness; raise `SUBMISSION_IMAGE_MAX_MB` only after load testing the target machine/network.
 - Every feature that changes show flow should include focused tests around the affected service and API boundary.
 - Avoid unrelated refactors while stabilizing the core panel flow.
 

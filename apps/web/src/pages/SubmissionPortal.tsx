@@ -2,16 +2,60 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 
 import { fetchMySubmissions, submitCharacter, type SubmissionResponse, type SubmitterSubmission } from '../api/submissions';
+import { usePublicConfig } from '../config/publicConfig';
 import { resolveImageUrl } from '../utils/media';
+
+const DRAFT_KEY = 'waifu-panel:submission-draft';
+
+function loadDraft() {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw) as Partial<Record<'name' | 'series' | 'description' | 'submitterAlias' | 'imageUrl', string>>;
+  } catch {
+    return {};
+  }
+}
+
+function saveDraft(patch: Partial<Record<'name' | 'series' | 'description' | 'submitterAlias' | 'imageUrl', string>>) {
+  try {
+    const current = loadDraft();
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...current, ...patch }));
+  } catch {
+    // ignore quota errors
+  }
+}
+
+function clearDraftExceptAlias() {
+  try {
+    const { submitterAlias } = loadDraft();
+    if (submitterAlias) {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ submitterAlias }));
+    } else {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  } catch {
+    // ignore
+  }
+}
 
 export function SubmissionPortal() {
   const queryClient = useQueryClient();
-  const [name, setName] = useState('');
-  const [series, setSeries] = useState('');
-  const [description, setDescription] = useState('');
-  const [imageUrl, setImageUrl] = useState('');
+  const { submissionImageMaxBytes } = usePublicConfig();
+  const draft = loadDraft();
+  const [name, setNameRaw] = useState(draft.name ?? '');
+  const [series, setSeriesRaw] = useState(draft.series ?? '');
+  const [description, setDescriptionRaw] = useState(draft.description ?? '');
+  const [submitterAlias, setSubmitterAliasRaw] = useState(draft.submitterAlias ?? '');
+  const [imageUrl, setImageUrlRaw] = useState(draft.imageUrl ?? '');
+
+  const setName = (v: string) => { setNameRaw(v); saveDraft({ name: v }); };
+  const setSeries = (v: string) => { setSeriesRaw(v); saveDraft({ series: v }); };
+  const setDescription = (v: string) => { setDescriptionRaw(v); saveDraft({ description: v }); };
+  const setSubmitterAlias = (v: string) => { setSubmitterAliasRaw(v); saveDraft({ submitterAlias: v }); };
+  const setImageUrl = (v: string) => { setImageUrlRaw(v); saveDraft({ imageUrl: v }); };
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(draft.imageUrl ?? null);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const submissionsQuery = useQuery({
@@ -47,11 +91,27 @@ export function SubmissionPortal() {
         }
         return null;
       });
+      clearDraftExceptAlias();
     }
   });
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
+
+    if (file && file.size > submissionImageMaxBytes) {
+      event.target.value = '';
+      setImageFile(null);
+      setLocalError(`Image uploads must be ${formatFileSize(submissionImageMaxBytes)} or smaller.`);
+      setPreviewUrl((prev) => {
+        if (prev?.startsWith('blob:')) {
+          URL.revokeObjectURL(prev);
+        }
+        return imageUrl || null;
+      });
+      return;
+    }
+
+    setLocalError(null);
     setImageFile(file);
     if (file) {
       setImageUrl('');
@@ -99,7 +159,7 @@ export function SubmissionPortal() {
     setLocalError(null);
 
     if (!name.trim()) {
-      setLocalError('Character name is required.');
+      setLocalError('Your waifu\'s name is required.');
       return;
     }
 
@@ -108,11 +168,17 @@ export function SubmissionPortal() {
       return;
     }
 
+    if (imageFile && imageFile.size > submissionImageMaxBytes) {
+      setLocalError(`Image uploads must be ${formatFileSize(submissionImageMaxBytes)} or smaller.`);
+      return;
+    }
+
     try {
       await submissionMutation.mutateAsync({
         name: name.trim(),
         series: series.trim() || undefined,
         description: description.trim() || undefined,
+        submitterAlias: submitterAlias.trim() || undefined,
         imageFile,
         imageUrl: imageFile ? undefined : imageUrl.trim()
       });
@@ -129,8 +195,8 @@ export function SubmissionPortal() {
 
   return (
     <section>
-      <h2>Submission Portal</h2>
-      <p>Share your waifu and brace for impact. Upload an image or link to one, add some context, and we&apos;ll slot it into the roasting queue.</p>
+      <h2>Waifu Submission</h2>
+      <p>We all want it, we'll never get it. But you can submit your waifu here to prove your love. Then we'll prove they suck.</p>
 
       <div className="submission-limit card">
         <strong>{remainingSlots ?? '...'}</strong>
@@ -162,9 +228,25 @@ export function SubmissionPortal() {
         </label>
 
         <label className="field">
+          <span>Your alias (shown on screen, optional)</span>
+          <input
+            value={submitterAlias}
+            onChange={(event) => setSubmitterAlias(event.target.value)}
+            placeholder="Anonymous coward"
+            maxLength={64}
+          />
+        </label>
+
+        <label className="field">
           <span>Upload image</span>
           <input type="file" accept="image/*" onChange={handleFileChange} />
-          {imageFile && <span className="muted small-text">{imageFile.name}</span>}
+          {imageFile ? (
+            <span className="muted small-text">
+              {imageFile.name} ({formatFileSize(imageFile.size)})
+            </span>
+          ) : (
+            <span className="muted small-text">Max {formatFileSize(submissionImageMaxBytes)}</span>
+          )}
         </label>
 
         <label className="field">
@@ -214,6 +296,11 @@ export function SubmissionPortal() {
       />
     </section>
   );
+}
+
+function formatFileSize(bytes: number) {
+  const mb = bytes / 1024 / 1024;
+  return `${Number.isInteger(mb) ? mb : Number(mb.toFixed(1))}MB`;
 }
 
 function SubmissionReceipt({ result }: { result: SubmissionResponse }) {

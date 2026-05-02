@@ -23,6 +23,7 @@ All configuration flows through environment variables. A `.env.example` will mir
 | `PUBLIC_BACKEND_URL` | Public backend base URL for REST, uploads, and sockets | `PUBLIC_BASE_URL`, then request origin |
 | `CONTROL_PASSCODE` | Simple shared secret for the control deck | unset |
 | `SUBMISSION_LIMIT` | Max submissions per token per event | `3` |
+| `SUBMISSION_IMAGE_MAX_MB` | Max uploaded image size for submissions, in megabytes | `5` |
 | `SESSION_SECRET` | Cookie signing secret; set a non-default value for show mode | `waifu-panel` fallback |
 | `CORS_ORIGIN` | Comma-separated frontend origins for dev mode | unset |
 
